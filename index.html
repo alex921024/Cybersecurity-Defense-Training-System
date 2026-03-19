@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資安防禦訓練系統 - 終端監控中心</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="menu-screen" class="screen active">
+        <h1>資安防禦訓練系統</h1>
+        <div id="entry-content" class="menu-options">
+            <button onclick="toggleDifficultySelect()">開 始</button>
+            <button onclick="toggleSettings()">⚙️ 設定</button>
+        </div>
+        <div id="difficulty-content" class="menu-options hidden">
+            <h2 style="color: #00FF00; text-align: center; margin-bottom: 20px;">請選擇訓練等級</h2>
+            <button onclick="prepareGame(0)">等級 0 (Easy - 240秒)</button>
+            <button onclick="prepareGame(1)">等級 1 (Normal - 240秒)</button>
+            <button onclick="prepareGame(2)">等級 2 (Hard - 480秒)</button>
+            <button class="break-btn" onclick="breakmenu()">Back</button>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <aside id="game-sidebar">
+            <div class="sidebar-header">防禦中心</div>
+            <nav class="tab-menu">
+                <button class="tab-btn active" onclick="switchTab(event, 'tab-terminal')">🖥️ 控制台</button>
+                <button class="tab-btn" onclick="switchTab(event, 'tab-status')">📈 系統狀態</button>
+                <button class="tab-btn" onclick="switchTab(event, 'tab-mailbox')">📧 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">0</span></button>
+                <button class="tab-btn" onclick="switchTab(event, 'tab-manual')">📘 指令手冊</button>
+            </nav>
+            <button class="quit-btn" onclick="quitGame()">放棄任務</button>
+        </aside>
+
+        <main id="tab-content-container">
+            <div id="tab-terminal" class="tab-content active">
+                <section id="terminal-section">
+                    <h3>指令控制台 (root@sec-server:~#)</h3>
+                    <div id="terminal-output"></div>
+                    <div class="input-line">
+                        <span>></span>
+                        <input type="text" id="cmd-input" placeholder="輸入指令..." autocomplete="off">
+                    </div>
+                    <div class="quick-commands">
+                        <span class="cmd-tag" onclick="quickCmd('status')">status</span>
+                        <span class="cmd-tag" onclick="quickCmd('netstat')">netstat</span>
+                        <span class="cmd-tag" onclick="quickCmd('block ip')">block ip</span>
+                        <span class="cmd-tag" onclick="quickCmd('passwd')">passwd</span>
+                    </div>
+                </section>
+                
+                <section id="analysis-section">
+                    <div class="analysis-header">
+                        <h3>即時流量監控 (Wireshark)</h3>
+                        <select id="protocol-filter">
+                            <option value="ALL">全部 (ALL)</option>
+                            <option value="TCP">TCP</option>
+                            <option value="UDP">UDP</option>
+                            <option value="ICMP">ICMP</option>
+                            <option value="DNS">DNS</option>
+                        </select>
+                    </div>
+                    <div class="scroll-box">
+                        <table id="packet-table">
+                            <thead><tr><th>時間</th><th>來源 IP</th><th>協定</th><th>資訊</th></tr></thead>
+                            <tbody id="packet-list"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+
+            <div id="tab-status" class="tab-content">
+                <h2 class="tab-title">硬體與防禦狀態</h2>
+                <div class="status-grid">
+                    <div class="stat-card">CPU: <span id="cpu-load">10</span>%</div>
+                    <div class="stat-card">GPU: <span id="gpu-load">10</span>%</div>
+                    <div class="stat-card">RAM: <span id="ram-load">15</span>%</div>
+                    <div class="stat-card danger">破解進度: <span id="crack-progress">0</span>%</div>
+                    <div class="stat-card time-card">剩餘時間: <span id="timer">--</span></div>
+                </div>
+            </div>
+
+            <div id="tab-mailbox" class="tab-content">
+                <h2 class="tab-title">企業收件匣</h2>
+                <div class="mail-layout">
+                    <div class="mail-list" id="mail-list-container"></div>
+                    <div class="mail-viewer" id="mail-viewer-container">
+                        <p style="text-align:center; padding-top:50px;">請選擇左側信件閱讀</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-manual" class="tab-content">
+                <h2 class="tab-title">系統指令參考手冊 (Cheat Sheet)</h2>
+                <div class="scroll-box">
+                    <table class="manual-table">
+                        <thead>
+                            <tr><th>指令</th><th>範例寫法</th><th>功能說明</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>status</code></td><td><code>status</code></td><td>查看系統詳細負載狀態與密碼破解進度。</td></tr>
+                            <tr><td><code>netstat</code></td><td><code>netstat</code></td><td>顯示當前網路連線，若有 DDoS 或異常流量會跳出警告。</td></tr>
+                            <tr><td><code>block</code></td><td><code>block udp</code><br><code>block ip</code></td><td>設定防火牆。封鎖對應的協定或 IP。</td></tr>
+                            <tr><td><code>flush-dns</code></td><td><code>flush-dns</code></td><td>清除 DNS 快取。遭遇 DNS 攻擊或網址嫁接時使用。</td></tr>
+                            <tr><td><code>scan-mail</code></td><td><code>scan-mail</code></td><td>自動掃描並隔離收件匣中的惡意釣魚信件。</td></tr>
+                            <tr><td><code>passwd</code></td><td><code>passwd</code></td><td>強制重置系統管理員密碼，將「破解進度」歸零。</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3 style="color: #00FF00; margin-top: 30px; border-bottom: 1px solid #444; padding-bottom: 5px;">⚠️ 常見攻擊處置指南 (SOP)</h3>
+                    <table class="manual-table">
+                        <thead>
+                            <tr><th>攻擊類型</th><th>特徵與處置方式</th><th>指令範例</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="color: #00FF00; font-weight: bold;">SYN / ICMP Flood</td>
+                                <td>【特徵】netstat 顯示大量異常封包。<br>【處置】封鎖惡意來源 IP，或擋下 Ping 洪水。</td>
+                                <td><code class="cmd-tag-mini" onclick="quickCmd('block ip')">block ip</code></td>
+                            </tr>
+                            <tr>
+                                <td style="color: #00FF00; font-weight: bold;">UDP Flood</td>
+                                <td>【特徵】Wireshark 出現大量紅色的 UDP 封包。<br>【處置】直接封鎖 UDP 流量。</td>
+                                <td><code class="cmd-tag-mini" onclick="quickCmd('block udp')">block udp</code></td>
+                            </tr>
+                            <tr>
+                                <td style="color: #00FF00; font-weight: bold;">DNS 放大攻擊</td>
+                                <td>【特徵】頻寬滿載，Wireshark 顯示異常 DNS 請求。<br>【處置】清除被污染的 DNS 快取。</td>
+                                <td><code class="cmd-tag-mini" onclick="quickCmd('flush-dns')">flush-dns</code></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="tutorial-modal" class="modal hidden">
+        <div class="modal-content" style="border: 2px solid #FFA500;">
+            <h2 style="color: #FFA500;">🛡️ 任務簡報</h2>
+            <p>確保系統負載不超過 100%，並在時間結束前阻止破解。</p>
+            <button class="manual-btn" onclick="confirmStart()">確認了解，開始訓練</button>
+        </div>
+    </div>
+
+    <div id="game-over-modal" class="modal hidden">
+        <div class="modal-content">
+            <h2 id="game-over-title">任務結束</h2>
+            <p id="game-over-reason"></p>
+            <button class="manual-btn" onclick="location.reload()">返回選單</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import GameManager from './gameManager.js';
+        window.gameManagerInstance = new GameManager();
+
+        let selectedDifficulty = 0;
+
+        window.switchTab = (evt, tabId) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            if (evt) evt.currentTarget.classList.add('active');
+        };
+
+        window.toggleDifficultySelect = () => {
+            document.getElementById('entry-content').classList.toggle('hidden');
+            document.getElementById('difficulty-content').classList.toggle('hidden');
+        };
+
+        window.prepareGame = (diff) => {
+            selectedDifficulty = diff;
+            document.getElementById('tutorial-modal').classList.remove('hidden');
+        };
+
+        window.confirmStart = () => {
+            document.getElementById('tutorial-modal').classList.add('hidden');
+            window.switchTab(null, 'tab-terminal');
+            window.gameManagerInstance.init(selectedDifficulty);
+        };
+
+        window.quickCmd = (cmd) => {
+            const input = document.getElementById('cmd-input');
+            input.value = cmd; input.focus();
+            input.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Enter'}));
+        };
+
+        window.quitGame = () => { if(confirm("確定放棄？")) location.reload(); };
+        window.viewMail = (id) => window.gameManagerInstance.viewMail(id);
+        window.handleMail = (id, action) => window.gameManagerInstance.handleMail(id, action);
+    </script>
+</body>
+</html>

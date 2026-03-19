@@ -1,0 +1,351 @@
+/* =========================================
+   全域設定與變數
+========================================= */
+:root {
+    --bg-color: #0a0a0a;
+    --sidebar-color: #151515;
+    --terminal-green: #00FF00;
+    --warning-orange: #FFA500;
+    --danger-red: #d93025;
+    --border-color: #333;
+}
+
+body, html {
+    margin: 0; padding: 0; height: 100%;
+    background-color: var(--bg-color);
+    color: var(--terminal-green);
+    font-family: 'Courier New', Courier, monospace;
+    overflow: hidden; /* 防止整個頁面出現捲軸 */
+}
+
+/* 畫面管理 */
+.screen { display: none; height: 100vh; width: 100vw; }
+.screen.active { display: flex; }
+.hidden { display: none !important; }
+
+/* =========================================
+   主選單畫面
+========================================= */
+#menu-screen { 
+    flex-direction: column;
+    align-items: center; 
+    justify-content: center; 
+}
+#menu-screen h1 { 
+    font-size: 3em; 
+    text-shadow: 0 0 10px var(--terminal-green); 
+    margin-bottom: 40px; 
+}
+.menu-options button { 
+    display: block; 
+    width: 300px; 
+    margin: 10px auto; 
+    padding: 15px; 
+    background: #111; 
+    color: var(--terminal-green); 
+    border: 1px solid var(--terminal-green); 
+    cursor: pointer; 
+    transition: 0.3s;
+}
+.menu-options button:hover { 
+    background: var(--terminal-green); 
+    color: #000; 
+    box-shadow: 0 0 10px var(--terminal-green); 
+}
+
+/* =========================================
+   遊戲主畫面佈局 (左側欄 + 右內容)
+========================================= */
+#game-screen {
+    display: flex;
+}
+
+/* 左側邊欄 */
+#game-sidebar {
+    width: 220px;
+    background: var(--sidebar-color);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 20px;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    color: #fff;
+}
+
+.tab-menu {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 0;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: #888;
+    padding: 15px 20px;
+    text-align: left;
+    font-family: inherit;
+    font-size: 1em;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--terminal-green);
+    background: #222;
+}
+
+.tab-btn.active {
+    color: var(--terminal-green);
+    background: #1e1e1e;
+    border-left: 4px solid var(--terminal-green);
+}
+
+.quit-btn {
+    margin: 20px;
+    background: var(--danger-red);
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* 右側內容容器 */
+#tab-content-container {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #000;
+}
+
+.tab-content {
+    display: none;
+    width: 100%;
+    height: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+    flex-direction: column;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+/* =========================================
+   分頁：控制台 (Terminal)
+========================================= */
+#tab-terminal {
+    gap: 15px;
+}
+
+#terminal-section {
+    flex: 1;
+    background: #000;
+    border: 1px solid #444;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#terminal-output {
+    flex: 1;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    font-size: 0.95em;
+    line-height: 1.4;
+    padding-right: 5px;
+}
+
+.input-line {
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #333;
+    padding-top: 10px;
+}
+
+#cmd-input {
+    background: transparent;
+    border: none;
+    color: var(--terminal-green);
+    outline: none;
+    width: 100%;
+    font-family: inherit;
+}
+
+.quick-commands {
+    margin-top: 10px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cmd-tag, .cmd-tag-mini {
+    background: #222;
+    color: var(--warning-orange);
+    border: 1px solid #444;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 0.85em;
+    border-radius: 3px;
+}
+
+.cmd-tag:hover {
+    background: var(--warning-orange);
+    color: #000;
+}
+
+/* Wireshark 表格區 */
+#analysis-section {
+    height: 40%;
+    background: #000;
+    border: 1px solid #444;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.scroll-box {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #333;
+    background: #111;
+}
+
+#packet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85em;
+}
+
+#packet-table th {
+    background: #222;
+    color: #fff;
+    position: sticky;
+    top: 0;
+    padding: 8px;
+}
+
+#packet-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #222;
+}
+
+/* =========================================
+   分頁：系統狀態 (Status)
+========================================= */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    background: #111;
+    padding: 30px;
+    border: 1px solid #333;
+    text-align: center;
+    font-size: 1.2em;
+}
+
+.stat-card.danger { color: #FF0000; border-color: #FF0000; }
+.stat-card.time-card { border-color: var(--warning-orange); color: var(--warning-orange); }
+
+/* =========================================
+   分頁：收件匣 (Gmail 風格)
+========================================= */
+.mail-layout {
+    display: flex;
+    height: calc(100% - 60px);
+    background: #fff; /* 內部維持白底 */
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.mail-list {
+    width: 35%;
+    border-right: 1px solid #ddd;
+    overflow-y: auto;
+    background: #fff;
+    color: #333;
+}
+
+.mail-item {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.mail-item.unread { background: #f2f6fc; border-left: 4px solid #1a73e8; font-weight: bold; }
+
+.mail-viewer {
+    width: 65%;
+    padding: 30px;
+    background: #fff;
+    color: #333;
+    overflow-y: auto;
+}
+
+.mail-header h3 { color: #202124; margin: 0; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+
+/* =========================================
+   分頁：指令手冊 (Manual)
+========================================= */
+.manual-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #0a0a0a;
+}
+
+.manual-table th {
+    background: #1a1a1a;
+    color: var(--terminal-green);
+    padding: 12px;
+    border: 1px solid #333;
+}
+
+.manual-table td {
+    padding: 12px;
+    border: 1px solid #333;
+    color: #ccc;
+}
+
+.manual-table code {
+    background: #000;
+    color: var(--warning-orange);
+    padding: 3px 6px;
+    border: 1px solid #444;
+}
+
+/* =========================================
+   滾動條特效 (螢光綠)
+========================================= */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #111; }
+::-webkit-scrollbar-thumb { background: var(--terminal-green); border-radius: 4px; }
+
+/* =========================================
+   彈出視窗 (Modal)
+========================================= */
+.modal {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 9999;
+}
+
+.modal-content {
+    background: #111;
+    border: 2px solid var(--terminal-green);
+    padding: 30px;
+    max-width: 600px;
+    text-align: center;
+}
