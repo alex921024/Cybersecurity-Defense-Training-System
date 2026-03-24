@@ -11,14 +11,14 @@
         <h1>資安防禦訓練系統</h1>
         <div id="entry-content" class="menu-options">
             <button onclick="toggleDifficultySelect()">開 始</button>
-            <button onclick="toggleSettings()">⚙️ 設定</button>
+            <button onclick="toggleSettings()">設定</button>
         </div>
         <div id="difficulty-content" class="menu-options hidden">
             <h2 style="color: #00FF00; text-align: center; margin-bottom: 20px;">請選擇訓練等級</h2>
             <button onclick="prepareGame(0)">等級 0 (Easy - 240秒)</button>
             <button onclick="prepareGame(1)">等級 1 (Normal - 240秒)</button>
             <button onclick="prepareGame(2)">等級 2 (Hard - 480秒)</button>
-            <button class="break-btn" onclick="breakmenu()">Back</button>
+            <button class="break-btn" onclick="breakmenu()">返回</button>
         </div>
     </div>
 
@@ -141,7 +141,8 @@
         <div class="modal-content" style="border: 2px solid #FFA500;">
             <h2 style="color: #FFA500;">🛡️ 任務簡報</h2>
             <p>確保系統負載不超過 100%，並在時間結束前阻止破解。</p>
-            <button class="manual-btn" onclick="confirmStart()">確認了解，開始訓練</button>
+            <button class="manual-btn" style="color: #ffffff;background-color: #0fe70f;" onclick="confirmStart()">確認了解，開始訓練</button>
+            <button class="btn-cancel" style="color: #e2e2e2 ;background-color: #e00f0f;" onclick="breaktoDifficulty()">我再想想</button>
         </div>
     </div>
 
@@ -171,6 +172,20 @@
             document.getElementById('difficulty-content').classList.toggle('hidden');
         };
 
+        window.breakmenu = () => {
+        document.getElementById('tutorial-modal').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('active');
+        document.getElementById('menu-screen').classList.add('active');
+        document.getElementById('entry-content').classList.remove('hidden');
+        document.getElementById('difficulty-content').classList.add('hidden');
+        };
+        window.breaktoDifficulty = () => {
+        document.getElementById('tutorial-modal').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('active');
+        document.getElementById('menu-screen').classList.add('active');
+        document.getElementById('entry-content').classList.add('hidden');
+        document.getElementById('difficulty-content').classList.remove('hidden');
+        };
         window.prepareGame = (diff) => {
             selectedDifficulty = diff;
             document.getElementById('tutorial-modal').classList.remove('hidden');
