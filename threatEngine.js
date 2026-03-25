@@ -9,12 +9,12 @@ class ThreatEngine {
         const dice = Math.floor(Math.random() * 100) + 1;
         const r = this.config.ranges;
 
-        if (this.inRange(dice, r.syk)) return "SYK";
-        if (this.inRange(dice, r.udp)) return "UDP";
-        if (this.inRange(dice, r.dns)) return "DNS";
-        if (this.inRange(dice, r.icmp)) return "ICMP";
-        if (this.inRange(dice, r.fishing)) return "Fishing";
-        return "Normal";
+        if (this.inRange(dice, r.syn)) return "syn";
+        if (this.inRange(dice, r.udp)) return "udp";
+        if (this.inRange(dice, r.dns)) return "dns";
+        if (this.inRange(dice, r.icmp)) return "icmp";
+        if (this.inRange(dice, r.fishing)) return "fishing";
+        return null;
     }
 
     inRange(val, range) {

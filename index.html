@@ -65,13 +65,13 @@
                     </div>
                     <div class="scroll-box">
                         <table id="packet-table">
-                            <thead><tr><th>時間</th><th>來源 IP</th><th>協定</th><th>資訊</th></tr></thead>
+                            <thead><tr><th>時間</th><th>來源 IP</th><th>來源 Port</th><th>目標 IP</th><th>目標 Port</th><th>協定</th><th>長度</th><th>資訊</th></tr></thead>
                             <tbody id="packet-list"></tbody>
                         </table>
                     </div>
                 </section>
             </div>
-            <!-- 3/22新增系統狀態頁面(圖表) -->
+            
             <div id="tab-status" class="tab-content">
                 <h2 class="tab-title">🖥️ 系統硬體即時監控中心</h2>
                 
@@ -203,7 +203,7 @@
         import GameManager from './gameManager.js';
         window.gameManagerInstance = new GameManager();
 
-        let selectedDifficulty = 0;
+        window.selectedDifficulty = 0;
 
         window.switchTab = (evt, tabId) => {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -213,47 +213,41 @@
             if (tabId === 'tab-status' && window.gameManagerInstance && window.gameManagerInstance.charts) {
                 const charts = window.gameManagerInstance.charts;
                 Object.values(charts).forEach(chart => {
-                if (chart) chart.resize();
+                    if (chart) chart.resize();
                 });
-            };
+            }
         };
+
         window.toggleDifficultySelect = () => {
             document.getElementById('entry-content').classList.toggle('hidden');
             document.getElementById('difficulty-content').classList.toggle('hidden');
         };
 
         window.breakmenu = () => {
-        document.getElementById('tutorial-modal').classList.add('hidden');
-        document.getElementById('game-screen').classList.remove('active');
-        document.getElementById('menu-screen').classList.add('active');
-        document.getElementById('entry-content').classList.remove('hidden');
-        document.getElementById('difficulty-content').classList.add('hidden');
+            document.getElementById('tutorial-modal').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('menu-screen').classList.add('active');
+            document.getElementById('entry-content').classList.remove('hidden');
+            document.getElementById('difficulty-content').classList.add('hidden');
         };
+
         window.breaktoDifficulty = () => {
-        document.getElementById('tutorial-modal').classList.add('hidden');
-        document.getElementById('game-screen').classList.remove('active');
-        document.getElementById('menu-screen').classList.add('active');
-        document.getElementById('entry-content').classList.add('hidden');
-        document.getElementById('difficulty-content').classList.remove('hidden');
+            document.getElementById('tutorial-modal').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('menu-screen').classList.add('active');
+            document.getElementById('entry-content').classList.add('hidden');
+            document.getElementById('difficulty-content').classList.remove('hidden');
         };
+
         window.prepareGame = (diff) => {
-            selectedDifficulty = diff;
+            window.selectedDifficulty = diff;
             document.getElementById('tutorial-modal').classList.remove('hidden');
         };
 
         window.confirmStart = () => {
             document.getElementById('tutorial-modal').classList.add('hidden');
             window.switchTab(null, 'tab-terminal');
-            
-            // 1. 初始化遊戲引擎
-            window.gameManagerInstance.init(selectedDifficulty);
-            
-            // 2. 顯示遊戲畫面
-            if (typeof window.gameManagerInstance.initCharts === 'function') {
-                window.gameManagerInstance.initCharts();
-            } else if (typeof window.gameManagerInstance.initHardwareChart === 'function') {
-                window.gameManagerInstance.initHardwareChart();
-            }
+            window.gameManagerInstance.init(window.selectedDifficulty);
         };
 
         window.quickCmd = (cmd) => {

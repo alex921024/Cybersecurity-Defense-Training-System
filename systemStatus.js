@@ -1,20 +1,18 @@
 class SystemStatus {
     constructor() {
-        this.cpu = 10; this.gpu = 10; this.ram = 15; this.wifi = 10;
+        this.cpu = 12; this.gpu = 8; this.ram = 25; this.wifi = 5;
         this.timer = 0; 
         this.crackProgress = 0; 
     }
 
     applyDamage(type) {
         if (type === 'Fishing') {
-            // 釣魚事件未處理傷害：+2~5% 
             const inc = Math.floor(Math.random() * 4) + 2; 
             this.cpu = Math.min(100, this.cpu + inc);
             this.gpu = Math.min(100, this.gpu + inc);
             this.wifi = Math.min(100, this.wifi + inc);
             this.ram = Math.min(100, this.ram + inc);
         } else {
-            // 網路攻擊未處理傷害：+5~10% 
             const inc = Math.floor(Math.random() * 6) + 5; 
             this.gpu = Math.min(100, this.gpu + inc);
             this.wifi = Math.min(100, this.wifi + inc);
@@ -23,7 +21,6 @@ class SystemStatus {
     }
 
     reduceLoad(amount) {
-        // 成功防禦時，讓玩家獲得更高的回饋感 (降溫更多)
         this.cpu = Math.max(5, this.cpu - amount);
         this.gpu = Math.max(5, this.gpu - amount);
         this.ram = Math.max(5, this.ram - amount);

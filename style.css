@@ -8,6 +8,7 @@
     --warning-orange: #FFA500;
     --danger-red: #d93025;
     --border-color: #333;
+    --win11-blue: #00ebff;
 }
 
 body, html {
@@ -15,17 +16,14 @@ body, html {
     background-color: var(--bg-color);
     color: var(--terminal-green);
     font-family: 'Courier New', Courier, monospace;
-    overflow: hidden; /* 防止整個頁面出現捲軸 */
+    overflow: hidden; 
 }
 
-/* 畫面管理 */
 .screen { display: none; height: 100vh; width: 100vw; }
 .screen.active { display: flex; }
 .hidden { display: none !important; }
 
-/* =========================================
-   主選單畫面
-========================================= */
+/* 主選單畫面 */
 #menu-screen { 
     flex-direction: column;
     align-items: center; 
@@ -53,14 +51,9 @@ body, html {
     box-shadow: 0 0 10px var(--terminal-green); 
 }
 
-/* =========================================
-   遊戲主畫面佈局 (左側欄 + 右內容)
-========================================= */
-#game-screen {
-    display: flex;
-}
+/* 遊戲主畫面佈局 */
+#game-screen { display: flex; }
 
-/* 左側邊欄 */
 #game-sidebar {
     width: 220px;
     background: var(--sidebar-color);
@@ -97,11 +90,7 @@ body, html {
     transition: 0.2s;
 }
 
-.tab-btn:hover {
-    color: var(--terminal-green);
-    background: #222;
-}
-
+.tab-btn:hover { color: var(--terminal-green); background: #222; }
 .tab-btn.active {
     color: var(--terminal-green);
     background: #1e1e1e;
@@ -118,7 +107,6 @@ body, html {
     font-weight: bold;
 }
 
-/* 右側內容容器 */
 #tab-content-container {
     flex: 1;
     position: relative;
@@ -134,17 +122,10 @@ body, html {
     box-sizing: border-box;
     flex-direction: column;
 }
+.tab-content.active { display: flex; }
 
-.tab-content.active {
-    display: flex;
-}
-
-/* =========================================
-   分頁：控制台 (Terminal)
-========================================= */
-#tab-terminal {
-    gap: 15px;
-}
+/* 終端機 (Terminal) */
+#tab-terminal { gap: 15px; }
 
 #terminal-section {
     flex: 1;
@@ -181,13 +162,7 @@ body, html {
     font-family: inherit;
 }
 
-.quick-commands {
-    margin-top: 10px;
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
+.quick-commands { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
 .cmd-tag, .cmd-tag-mini {
     background: #222;
     color: var(--warning-orange);
@@ -197,11 +172,7 @@ body, html {
     font-size: 0.85em;
     border-radius: 3px;
 }
-
-.cmd-tag:hover {
-    background: var(--warning-orange);
-    color: #000;
-}
+.cmd-tag:hover { background: var(--warning-orange); color: #000; }
 
 /* Wireshark 表格區 */
 #analysis-section {
@@ -220,52 +191,71 @@ body, html {
     background: #111;
 }
 
-#packet-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85em;
-}
-
-#packet-table th {
-    background: #222;
-    color: #fff;
-    position: sticky;
-    top: 0;
-    padding: 8px;
-}
-
-#packet-table td {
-    padding: 6px 8px;
-    border-bottom: 1px solid #222;
-}
+#packet-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+#packet-table th { background: #222; color: #fff; position: sticky; top: 0; padding: 8px; }
+#packet-table td { padding: 6px 8px; border-bottom: 1px solid #222; }
 
 /* =========================================
-   分頁：系統狀態 (Status)
+   系統狀態 (Status) - Win11 風格
 ========================================= */
-.status-grid {
+.monitor-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 15px;
+    background: #000;
+    border-radius: 5px;
+    margin-top: 15px;
 }
 
-.stat-card {
-    background: #111;
-    padding: 30px;
+.chart-box {
+    background-color: #0c0c0c;
     border: 1px solid #333;
-    text-align: center;
-    font-size: 1.2em;
+    padding: 12px;
+    border-radius: 4px;
+    position: relative;
+    transition: 0.3s;
 }
 
-.stat-card.danger { color: #FF0000; border-color: #FF0000; }
-.stat-card.time-card { border-color: var(--warning-orange); color: var(--warning-orange); }
+.chart-body {
+    height: 150px;
+    position: relative;
+    background-image: 
+        linear-gradient(#1a1a1a 1px, transparent 1px),
+        linear-gradient(90deg, #1a1a1a 1px, transparent 1px);
+    background-size: 20px 20px;
+    border: 1px solid #222;
+}
 
-/* =========================================
-   分頁：收件匣 (Gmail 風格)
-========================================= */
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85em;
+    margin-bottom: 5px;
+    color: #ccc;
+}
+
+.chart-footer {
+    text-align: right;
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-top: 8px;
+    font-family: monospace;
+}
+
+#cpu-load { color: var(--win11-blue); }
+#gpu-load { color: #00FF00; }
+#ram-load { color: #FFFF00; }
+
+.danger-box { border-color: #611 !important; }
+.danger-box .chart-footer { color: #ff3333; }
+.danger-box .chart-header { color: #ff3333; }
+
+/* 收件匣 (Gmail 風格) */
 .mail-layout {
     display: flex;
     height: calc(100% - 60px);
-    background: #fff; /* 內部維持白底 */
+    background: #fff; 
     border-radius: 8px;
     overflow: hidden;
 }
@@ -283,7 +273,6 @@ body, html {
     border-bottom: 1px solid #eee;
     cursor: pointer;
 }
-
 .mail-item.unread { background: #f2f6fc; border-left: 4px solid #1a73e8; font-weight: bold; }
 
 .mail-viewer {
@@ -295,53 +284,27 @@ body, html {
 }
 
 .mail-header h3 { color: #202124; margin: 0; padding-bottom: 10px; border-bottom: 1px solid #eee; }
+.mail-actions { margin-top: 20px; display: flex; gap: 10px; }
+.btn-delete { background: #d93025; color: #fff; border: none; padding: 10px; cursor: pointer; border-radius: 4px; }
+.btn-click { background: #1a73e8; color: #fff; border: none; padding: 10px; cursor: pointer; border-radius: 4px; }
 
-/* =========================================
-   分頁：指令手冊 (Manual)
-========================================= */
-.manual-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: #0a0a0a;
-}
+/* 指令手冊 (Manual) */
+.manual-table { width: 100%; border-collapse: collapse; background: #0a0a0a; }
+.manual-table th { background: #1a1a1a; color: var(--terminal-green); padding: 12px; border: 1px solid #333; }
+.manual-table td { padding: 12px; border: 1px solid #333; color: #ccc; }
+.manual-table code { background: #000; color: var(--warning-orange); padding: 3px 6px; border: 1px solid #444; }
 
-.manual-table th {
-    background: #1a1a1a;
-    color: var(--terminal-green);
-    padding: 12px;
-    border: 1px solid #333;
-}
-
-.manual-table td {
-    padding: 12px;
-    border: 1px solid #333;
-    color: #ccc;
-}
-
-.manual-table code {
-    background: #000;
-    color: var(--warning-orange);
-    padding: 3px 6px;
-    border: 1px solid #444;
-}
-
-/* =========================================
-   滾動條特效 (螢光綠)
-========================================= */
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #111; }
 ::-webkit-scrollbar-thumb { background: var(--terminal-green); border-radius: 4px; }
 
-/* =========================================
-   彈出視窗 (Modal)
-========================================= */
+/* 彈出視窗 (Modal) */
 .modal {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0, 0, 0, 0.9);
     display: flex; justify-content: center; align-items: center;
     z-index: 9999;
 }
-
 .modal-content {
     background: #111;
     border: 2px solid var(--terminal-green);
@@ -349,52 +312,4 @@ body, html {
     max-width: 600px;
     text-align: center;
 }
-:root {
-    --monitor-green: #00FF00;      /* 正常終端綠 */
-    --monitor-danger: #FF0000;     /* 破解紅色 */
-    --monitor-grid: #222222;       /* 網格背景 */
-    --monitor-box: #000000;        /* 區塊背景 */
-    --monitor-border: #333333;     /* 區塊邊框 */
-    --monitor-text: #FFFFFF;       /* 文字白 */
-}
-/*==========================================
-   分頁：系統監控 (Monitor)
-==========================================*/
-.monitor-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    padding: 15px;
-    background-color: var(--monitor-grid);
-    border-radius: 5px;
-    margin-top: 15px;
-    max-width: 1500px;
-}
-
-.chart-box {
-    background-color: var(--monitor-box);
-    border: 1px solid var(--monitor-border);
-    padding: 10px;
-    border-radius: 3px;
-    transition: 0.3s;
-}
-
-.danger-box {
-    border-color: var(--monitor-danger);
-}
-
-.chart-box h4 {
-    color: var(--monitor-green);
-    margin: 0 0 10px 0;
-    font-family: 'Courier New', monospace;
-    text-align: center;
-}
-
-.danger-box h4 {
-    color: var(--monitor-danger);
-}
-
-.chart-body {
-    height: 300px;
-    position: relative;
-}
+.manual-btn, .btn-cancel { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin: 10px;}

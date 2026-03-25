@@ -1,18 +1,12 @@
 const GameDB = {
     difficulties: {
-       // 等級 0
         0: { time: 240,  ranges: { syn: [1, 15], udp: [16, 30], dns: null, icmp: null, fishing: [31, 45], none: [46, 100] } },
-        
-        // 等級 1
         1: { time: 240, ranges: { syn: [1, 10], udp: [11, 20], dns: [21, 30], icmp: null, fishing: [31, 60], none: [61, 100] } },
-        
-        // 等級 2
         2: { time: 480, ranges: { syn: [1, 10], udp: [11, 25], dns: [26, 40], icmp: [41, 55], fishing: [56, 75], none: [76, 100] } }
     },
     maliciousIPs: ["103.24.55.12", "45.22.19.8", "188.166.25.190", "8.8.8.8", "167.99.14.22"],
     security: { accountLen: 6, passwordLen: 10 },
     
-    // 郵件模擬資料庫 (保持不變)
     emails: {
         normal: [
             { sender: "HR 部門", subject: "本月出勤紀錄確認", content: "請同仁至差勤系統確認本月打卡紀錄是否有誤，若有請假未簽核請盡速處理。" },
