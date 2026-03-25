@@ -9,6 +9,14 @@ class GameManager {
         this.activeThreat = null;
         this.cli = new CLIModule(this);
         this.difficultyConfig = null;
+        this.charts = {
+            cpu: null,
+            gpu: null,
+            ram: null,
+            hack: null
+        };
+        // 圖表數據點最大值，超過後會開始滾動
+        this.maxDataPoints = 10;
         
         // 郵件系統變數
         this.inbox = [];
@@ -37,7 +45,7 @@ class GameManager {
             filterEl.addEventListener('change', () => this.renderPackets());
         }
     }
-
+    // 遊戲初始化邏輯
     init(difficulty) {
         document.getElementById('menu-screen').classList.remove('active');
         document.getElementById('game-screen').classList.add('active');
@@ -59,6 +67,9 @@ class GameManager {
         
         // 遊戲開始時先塞一封正常信件
         this.receiveEmail(false);
+
+        // 初始化圖表
+        this.initCharts();
 
         // 啟動主迴圈 (每秒執行一次)
         this.interval = setInterval(() => this.gameLoop(), 1000);
@@ -91,12 +102,32 @@ class GameManager {
         // 產生並渲染背景封包
         this.generatePacketUI();
         this.updateUI();
+        // 每秒更新圖表數據
+        this.updateAllCharts(
+            this.status.cpu, 
+            this.status.gpu, 
+            this.status.ram, 
+            this.status.crackProgress
+        );
 
         // 檢查勝負條件
         const result = this.status.checkStatus();
         if (result !== "RUNNING") this.endGame(result);
     }
+    updateStatus() {
+    // 1. 你原本可能有的程式碼（抓取隨機或計算出來的負載量）
+        const currentCpu = this.cpuLoad; // 或者是 document.getElementById('cpu-load').innerText 等等
+        const currentGpu = this.gpuLoad;
+        const currentRam = this.ramLoad;
+        const currentHack = this.crackProgress;
 
+        // 2. 更新圖表數據
+        this.updateAllCharts(currentCpu, currentGpu, currentRam, currentHack);
+    }
+    
+    // ==========================================
+    // 事件生成邏輯
+    // ==========================================
     generateEvent() {
         const dice = Math.floor(Math.random() * 100) + 1;
         const r = this.difficultyConfig.ranges;
@@ -371,6 +402,101 @@ class GameManager {
             const modalEl = document.getElementById('game-over-modal');
             if(modalEl) modalEl.classList.remove('hidden');
         }, 500); // 延遲半秒確保玩家能看到最後的畫面狀態
+    }   
+    // ==========================================
+    // 圖表初始化與更新邏輯
+    // ==========================================
+        initCharts() {
+    this.charts.cpu = this.createLineChart('cpuChart', 'CPU %', '#00FF00');
+    
+    this.charts.gpu = this.createLineChart('gpuChart', 'GPU %', '#00FFFF');
+    
+    this.charts.ram = this.createLineChart('ramChart', 'RAM %', '#FFFF00'); 
+    
+    this.charts.hack = this.createHackChart('hackChart');
+}
+    // 產生一般硬體圖表的輔助函式
+    createLineChart(elementId, labelText, lineColor) {
+        const ctx = document.getElementById(elementId).getContext('2d');
+        return new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], 
+                datasets: [{
+                    label: labelText,
+                    data: [],
+                    borderColor: lineColor,
+                    backgroundColor: `${lineColor}44`, // 半透明填充
+                    fill: true,
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointRadius: 0
+                    }]
+                },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { display: false }, grid: { color: '#222' } },
+                    y: { min: 0, max: 100, ticks: { color: '#fff' }, grid: { color: '#222' } }
+                },
+            plugins: { legend: { display: false } } // 隱藏頂部圖例
+        }
+    });
+}
+
+// 產生破解圖表的輔助函式 (紅色填充)
+    createHackChart(elementId) {
+        const ctx = document.getElementById(elementId).getContext('2d');
+        const red = '#FF0000';
+        return new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [], 
+                datasets: [{
+                    label: '破解 %',
+                    data: [],
+                    borderColor: red,
+                    backgroundColor: `${red}55`,
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { ticks: { display: false }, grid: { color: '#331111' } },
+                    y: { min: 0, max: 100, ticks: { color: '#fff' }, grid: { color: '#331111' } }
+                },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    // 每秒呼叫這個 function 傳入數據
+        updateAllCharts(cpuVal, gpuVal, ramVal, hackVal) {
+            const chartKeys = ['cpu', 'gpu', 'ram', 'hack'];
+            const newVals = { cpu: cpuVal, gpu: gpuVal, ram: ramVal, hack: hackVal };
+
+        chartKeys.forEach(key => {
+            const chartObj = this.charts[key];
+            if (!chartObj) return;
+
+            // 在圖表數據中加入新值，並使用空字串作為 X 軸標籤（因為我們不顯示具體時間）
+            chartObj.data.labels.push(''); 
+            chartObj.data.datasets[0].data.push(newVals[key]); 
+            
+            // 如果數據點超過 maxDataPoints，則移除最舊的數據點（實現滾動效果）
+            if (chartObj.data.labels.length > this.maxDataPoints) {
+                chartObj.data.labels.shift();
+                chartObj.data.datasets[0].data.shift();
+            }
+
+            // 更新圖表顯示
+            chartObj.update('none');
+        });
     }
 }
 

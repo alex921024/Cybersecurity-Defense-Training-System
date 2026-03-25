@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>資安防禦訓練系統 - 終端監控中心</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div id="menu-screen" class="screen active">
@@ -70,15 +71,59 @@
                     </div>
                 </section>
             </div>
-
+            <!-- 3/22新增系統狀態頁面(圖表) -->
             <div id="tab-status" class="tab-content">
-                <h2 class="tab-title">硬體與防禦狀態</h2>
-                <div class="status-grid">
-                    <div class="stat-card">CPU: <span id="cpu-load">10</span>%</div>
-                    <div class="stat-card">GPU: <span id="gpu-load">10</span>%</div>
-                    <div class="stat-card">RAM: <span id="ram-load">15</span>%</div>
-                    <div class="stat-card danger">破解進度: <span id="crack-progress">0</span>%</div>
-                    <div class="stat-card time-card">剩餘時間: <span id="timer">--</span></div>
+                <h2 class="tab-title">🖥️ 系統硬體即時監控中心</h2>
+                
+                <div class="time-banner">
+                    🕒 剩餘時間: <span id="timer">--</span>
+                </div>
+
+                <div class="monitor-grid">
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <span>CPU 使用率</span>
+                            <span class="live-indicator"></span>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="cpuChart"></canvas>
+                        </div>
+                        <div class="chart-footer">負載: <span id="cpu-load">0</span>%</div>
+                    </div>
+
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <span>GPU 使用率</span>
+                            <span class="live-indicator"></span>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="gpuChart"></canvas>
+                        </div>
+                        <div class="chart-footer">負載: <span id="gpu-load">0</span>%</div>
+                    </div>
+
+                    <div class="chart-box">
+                        <div class="chart-header">
+                            <span>RAM 使用率</span>
+                            <span class="live-indicator"></span>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="ramChart"></canvas>
+                        </div>
+                        <div class="chart-footer">負載: <span id="ram-load">0</span>%</div>
+                    </div>
+
+                    <div class="chart-box danger-box">
+                        <div class="chart-header">
+                            <span style="color: #FF3333;">密碼破解進度</span>
+                            <span class="live-indicator danger-pulse"></span>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="hackChart"></canvas>
+                        </div>
+                        
+                        <div class="chart-footer" style="color: #FF3333;">進度: <span id="crack-progress">0</span>%</div>
+                    </div>
                 </div>
             </div>
 
@@ -165,8 +210,13 @@
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             if (evt) evt.currentTarget.classList.add('active');
+            if (tabId === 'tab-status' && window.gameManagerInstance && window.gameManagerInstance.charts) {
+                const charts = window.gameManagerInstance.charts;
+                Object.values(charts).forEach(chart => {
+                if (chart) chart.resize();
+                });
+            };
         };
-
         window.toggleDifficultySelect = () => {
             document.getElementById('entry-content').classList.toggle('hidden');
             document.getElementById('difficulty-content').classList.toggle('hidden');
@@ -194,7 +244,16 @@
         window.confirmStart = () => {
             document.getElementById('tutorial-modal').classList.add('hidden');
             window.switchTab(null, 'tab-terminal');
+            
+            // 1. 初始化遊戲引擎
             window.gameManagerInstance.init(selectedDifficulty);
+            
+            // 2. 顯示遊戲畫面
+            if (typeof window.gameManagerInstance.initCharts === 'function') {
+                window.gameManagerInstance.initCharts();
+            } else if (typeof window.gameManagerInstance.initHardwareChart === 'function') {
+                window.gameManagerInstance.initHardwareChart();
+            }
         };
 
         window.quickCmd = (cmd) => {

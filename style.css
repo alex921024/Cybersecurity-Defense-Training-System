@@ -349,3 +349,52 @@ body, html {
     max-width: 600px;
     text-align: center;
 }
+:root {
+    --monitor-green: #00FF00;      /* 正常終端綠 */
+    --monitor-danger: #FF0000;     /* 破解紅色 */
+    --monitor-grid: #222222;       /* 網格背景 */
+    --monitor-box: #000000;        /* 區塊背景 */
+    --monitor-border: #333333;     /* 區塊邊框 */
+    --monitor-text: #FFFFFF;       /* 文字白 */
+}
+/*==========================================
+   分頁：系統監控 (Monitor)
+==========================================*/
+.monitor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 15px;
+    background-color: var(--monitor-grid);
+    border-radius: 5px;
+    margin-top: 15px;
+    max-width: 1500px;
+}
+
+.chart-box {
+    background-color: var(--monitor-box);
+    border: 1px solid var(--monitor-border);
+    padding: 10px;
+    border-radius: 3px;
+    transition: 0.3s;
+}
+
+.danger-box {
+    border-color: var(--monitor-danger);
+}
+
+.chart-box h4 {
+    color: var(--monitor-green);
+    margin: 0 0 10px 0;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+}
+
+.danger-box h4 {
+    color: var(--monitor-danger);
+}
+
+.chart-body {
+    height: 300px;
+    position: relative;
+}
