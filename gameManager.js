@@ -17,7 +17,6 @@ class GameManager {
         this.packetHistory = [];
         this.stats = { syn: 0, udp: 0, dns: 0, icmp: 0, fishing: 0 };
 
-        // 初始化雷達模組
         if (typeof ThreatRadar !== 'undefined') {
             this.radar = new ThreatRadar();
         } else {
@@ -106,7 +105,6 @@ class GameManager {
         if (newThreat) {
             this.activeThreat = newThreat;
             
-            // 觸發教學雷達動畫
             if (this.radar && ['syn', 'udp', 'dns', 'icmp'].includes(newThreat)) {
                 this.radar.trigger(newThreat);
             }
@@ -382,7 +380,7 @@ class GameManager {
                 chartObj.data.labels.shift();
                 chartObj.data.datasets[0].data.shift();
             }
-            chartObj.update();
+            chartObj.update('none');
         });
     }
 }

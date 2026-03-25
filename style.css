@@ -315,75 +315,100 @@ body, html {
 .manual-btn, .btn-cancel { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin: 10px;}
 
 /* =========================================
-   即時威脅雷達面板樣式 (新增)
+   即時威脅雷達面板樣式
 ========================================= */
 #threat-radar-panel {
     position: absolute;
     right: 20px;
     top: 20px;
-    width: 320px;
+    width: 480px; /* 預設面板變寬 */
+    min-width: 350px; /* 最小寬度限制 */
+    min-height: 300px; /* 最小高度限制 */
     background-color: #111;
     border: 1px solid var(--border-color);
     border-radius: 8px;
     z-index: 1000;
     font-family: 'Courier New', Courier, monospace;
-    box-shadow: 0 0 15px rgba(0,0,0,0.8);
+    box-shadow: 0 0 20px rgba(0,0,0,0.8);
     display: flex;
     flex-direction: column;
+    resize: both; /* 允許玩家透過右下角調整視窗大小 */
+    overflow: hidden; /* 防止內容溢出 */
 }
 
-/* 確保雷達只在遊戲畫面顯示 */
 #menu-screen.active ~ #threat-radar-panel {
     display: none;
 }
 
+/* 讓 Header 成為拖曳控制區 */
 .radar-header {
     background-color: #1a1a1a;
     color: var(--warning-orange);
-    padding: 10px;
+    padding: 12px;
+    font-size: 1.1em;
     font-weight: bold;
     border-bottom: 1px solid var(--border-color);
-    border-radius: 8px 8px 0 0;
+    cursor: grab; /* 滑鼠移過去顯示為手掌圖示 */
+    user-select: none; /* 防止拖曳時反白文字 */
+}
+.radar-header:active {
+    cursor: grabbing; /* 按下時變為抓取狀態 */
 }
 
 #radar-screen {
     background-color: #050505;
     padding: 10px;
     border-bottom: 1px solid var(--border-color);
+    flex: 1; /* 視窗拉長時，讓動畫區域自動伸展 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #radar-svg {
     width: 100%;
-    height: auto;
+    height: 100%;
+    max-height: 100%;
 }
 
-.attack-info {
-    padding: 15px;
-}
+.attack-info { padding: 15px; }
 
 #attack-type-title {
     color: var(--terminal-green);
     font-size: 1.1em;
     font-weight: bold;
-    margin-bottom: 10px;
-    transition: color 0.3s ease;
+    margin-bottom: 15px;
 }
 
 .radar-step {
-    color: #888;
-    font-size: 0.9em;
-    margin-bottom: 8px;
-    padding: 6px;
+    color: #666;
+    font-size: 0.95em;
+    margin-bottom: 10px;
+    padding: 10px;
     border-left: 3px solid transparent;
-    transition: all 0.3s ease;
+    transition: all 0.4s ease;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
+    background-color: #1a1a1a;
+    border-radius: 0 6px 6px 0;
 }
+
+.radar-step i { font-size: 1.2em; width: 25px; text-align: center; }
 
 .radar-step.active {
     color: #fff;
     border-left: 3px solid #fff;
-    background-color: rgba(255,255,255,0.1);
-    transform: translateX(5px);
+    background-color: rgba(255,255,255,0.15);
+    transform: translateX(8px);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+}
+
+.pulse-icon {
+    animation: alert-pulse 1s infinite alternate;
+}
+
+@keyframes alert-pulse {
+    from { opacity: 1; transform: scale(1); }
+    to { opacity: 0.5; transform: scale(1.3); }
 }

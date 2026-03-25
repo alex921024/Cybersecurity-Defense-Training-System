@@ -213,11 +213,22 @@
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
             if (evt) evt.currentTarget.classList.add('active');
+            
             if (tabId === 'tab-status' && window.gameManagerInstance && window.gameManagerInstance.charts) {
                 const charts = window.gameManagerInstance.charts;
                 Object.values(charts).forEach(chart => {
                     if (chart) chart.resize();
                 });
+            }
+
+            // ✅ 新增：控制雷達面板只在「控制台 (tab-terminal)」顯示
+            const radarPanel = document.getElementById('threat-radar-panel');
+            if (radarPanel) {
+                if (tabId === 'tab-terminal') {
+                    radarPanel.style.display = 'flex'; // 在控制台顯示
+                } else {
+                    radarPanel.style.display = 'none'; // 在其他分頁隱藏
+                }
             }
         };
 
@@ -249,7 +260,7 @@
 
         window.confirmStart = () => {
             document.getElementById('tutorial-modal').classList.add('hidden');
-            window.switchTab(null, 'tab-terminal');
+            window.switchTab(null, 'tab-terminal'); // 遊戲開始預設切換到控制台
             window.gameManagerInstance.init(window.selectedDifficulty);
         };
 
