@@ -177,9 +177,9 @@ body, html {
 /* Wireshark 表格區 */
 #analysis-section {
     height: 40%;
-    background: #000;
+    background: #111; /* 稍微提升背景深度 */
     border: 1px solid #444;
-    padding: 15px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
 }
@@ -188,13 +188,38 @@ body, html {
     flex: 1;
     overflow-y: auto;
     border: 1px solid #333;
-    background: #111;
+    background: #ffffff;
 }
 
-#packet-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
-#packet-table th { background: #222; color: #fff; position: sticky; top: 0; padding: 8px; }
-#packet-table td { padding: 6px 8px; border-bottom: 1px solid #222; }
+#packet-table { width: 100%; 
+    border-collapse: collapse; 
+    font-family: 'Consolas', 'Monaco', monospace; 
+    font-size: 12px; 
+    table-layout: fixed;
+ }
 
+#packet-table th { background: #f0f0f0; 
+    color: #333; 
+    position: sticky; 
+    top: 0; 
+    padding: 4px 8px; 
+    border: 1px solid #ccc;
+    font-weight: normal;
+    text-align: left; 
+}
+
+#packet-table td { padding: 2px 8px; 
+    border-right: 1px solid #eee; 
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #222;
+ }
+.proto-tcp td{ background-color: #e7f4ff !important; }   /* 淺藍 */
+.proto-udp td{ background-color: #ffffd5 !important; }   /* 淺黃 */
+.proto-icmp td{ background-color: #facdff !important; }  /* 淺粉 */
+.proto-http td{ background-color: #e7ffdf !important; }  /* 淺綠 */
+.proto-dns td{ background-color: #e2e2ff !important; }   /* 紫藍 */
 /* 系統狀態 (Status) */
 .monitor-grid {
     display: grid;
@@ -267,11 +292,15 @@ body, html {
 }
 
 .mail-item {
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 12px 15px;
+    position: relative;
+    transition: background 0.2s;
 }
-.mail-item.unread { background: #f2f6fc; border-left: 4px solid #1a73e8; font-weight: bold; }
+
+.mail-item.unread { 
+    background: #f2f6fc; border-left: 4px solid #1a73e8; font-weight: bold; 
+}
 
 .mail-viewer {
     width: 65%;
@@ -409,4 +438,48 @@ body, html {
 @keyframes alert-pulse {
     from { opacity: 1; transform: scale(1); }
     to { opacity: 0.6; transform: scale(1.15); }
+}
+
+#game-notification-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 通知小方塊 */
+.game-toast {
+    background: rgba(0, 0, 0, 0.85);
+    padding: 12px 20px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    animation: slideIn 0.3s ease-out;
+    /* 這裡把原本寫死的紅色刪掉 */
+}
+/* 紅色 - 警告/危險 (預設) */
+.game-toast.danger {
+    border-left: 4px solid #ff4444;
+    color: #ff4444;
+}
+
+/* 綠色 - 成功/系統訊息 */
+.game-toast.success {
+    border-left: 4px solid #00ff00;
+    color: #00ff00;
+    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+}
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.toast-fade-out {
+    animation: fadeOut 0.5s ease-in forwards;
+}
+
+@keyframes fadeOut {
+    to { opacity: 0; transform: translateY(-20px); }
 }

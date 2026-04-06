@@ -85,6 +85,7 @@ class GameManager {
 
         this.generatePacketUI();
         this.updateUI();
+        this.renderMailList();
         this.updateAllCharts(this.status.cpu, this.status.gpu, this.status.ram, this.status.crackProgress);
 
         const result = this.status.checkStatus();
@@ -129,6 +130,7 @@ class GameManager {
             subject: mailData.subject,
             content: mailData.content,
             isMalicious: isMalicious,
+            spawnTime: this.status.timer,
             read: false
         };
         this.inbox.unshift(newMail); 
@@ -144,9 +146,19 @@ class GameManager {
         this.inbox.forEach(mail => {
             if(!mail.read) unread++;
             const div = document.createElement('div');
+            let timeWarning = ""; 
+            const limit = 15; // 15秒限時
+            // 計算剩餘秒數：15 - (出生時的時間 - 現在時間)
+            const remaining = limit - (mail.spawnTime - this.status.timer);
+            if (remaining >= 0) {
+                timeWarning = ` <span style="color: #FF0000;"> ${remaining}s</span>`;
+                }else {
+                timeWarning = ` <span style="color: #888;"> 已過期</span>`;
+            }
+
             div.className = `mail-item ${mail.read ? 'read' : 'unread'}`;
-            div.onclick = () => window.viewMail(mail.id);
-            div.innerHTML = `<strong>${mail.sender}</strong><br><span style="font-size:0.9em">${mail.subject}</span>`;
+            div.onclick = () => this.viewMail(mail.id);
+            div.innerHTML = `<strong>${mail.sender}</strong>${timeWarning}<br><span style="font-size:0.9em">${mail.subject}</span>`;
             list.appendChild(div);
         });
 
@@ -188,7 +200,7 @@ class GameManager {
                 this.stats.fishing++; 
                 this.activeThreat = null; 
                 this.status.reduceLoad(15);
-                this.logTerminal(`[系統通知] 成功刪除惡意釣魚郵件，危機解除。`, "system");
+                this.logTerminal(`[系統通知] 成功刪除惡意釣魚郵件，危機解除。`, "success");
             }
             this.inbox.splice(mailIndex, 1);
             document.getElementById('mail-viewer-container').innerHTML = '<p style="color:#888; text-align:center; margin-top:50px;">信件已刪除</p>';
@@ -199,10 +211,10 @@ class GameManager {
                 this.activeThreat = null; 
                 this.status.applyDamage('Fishing'); 
                 this.status.applyDamage('Fishing'); 
-                this.logTerminal(`[重大警報] 員工點擊了惡意連結！系統已遭感染，資源嚴重消耗！`, "alert");
-                alert("警告：您點擊了釣魚連結，導致系統感染惡意程式碼！資源大幅消耗。");
+                this.logTerminal(`[重大警報] 員工點擊了惡意連結！系統已遭感染，資源嚴重消耗！`, "danger");
+                this.showNotification("警告：您點擊了釣魚連結，導致系統感染惡意程式碼！資源大幅消耗。");
             } else {
-                alert("這是一封正常的信件，已標示為處理完成。");
+                this.showNotification("這是一封正常的信件，已標示為處理完成。","success");
             }
             this.inbox.splice(mailIndex, 1);
             document.getElementById('mail-viewer-container').innerHTML = '';
@@ -259,9 +271,12 @@ class GameManager {
 
         filteredPackets.slice(0, 15).forEach(p => {
             const tr = document.createElement('tr');
+            const protoClass = `proto-${p.proto.toLowerCase().replace('.', '')}`; // 處理 TLSv1.2 的點
+            tr.classList.add(protoClass);
             if (p.isAttack) {
-                tr.style.color = "#ff4444";
-                tr.style.fontWeight = "bold";
+            tr.classList.add('packet-danger');
+            } else {
+            tr.className = protoClass;  
             }
             tr.innerHTML = `<td>${p.time}</td>
                             <td>${p.srcIP}</td>
@@ -382,6 +397,35 @@ class GameManager {
             }
             chartObj.update('none');
         });
+    }
+    showNotification(message, type = 'danger') {
+    let container = document.getElementById('game-notification-container');
+    // 如果找不到容器就建立一個 (防止噴錯)
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'game-notification-container';
+        document.getElementById('game-screen').appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    
+    // 1. 根據 type 決定 CSS 類別 (danger 或 success)
+    toast.className = `game-toast ${type}`; 
+    
+    // 2. 自動判斷標頭文字
+    const header = type === 'success' ? '[系統]' : '[警告]';
+    
+    // 3. 填入內容 (這裡只寫一次！)
+    toast.innerHTML = `<strong>${header}</strong> ${message}`;
+
+    // 4. 放入容器
+    container.appendChild(toast);
+
+    // 5. 3秒後自動消失
+    setTimeout(() => {
+        toast.classList.add('toast-fade-out');
+        setTimeout(() => toast.remove(), 500);
+    }, 3000);
     }
 }
 
