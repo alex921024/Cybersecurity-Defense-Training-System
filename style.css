@@ -177,7 +177,7 @@ body, html {
 /* Wireshark 表格區 */
 #analysis-section {
     height: 40%;
-    background: #111; /* 稍微提升背景深度 */
+    background: #111;
     border: 1px solid #444;
     padding: 10px;
     display: flex;
@@ -191,14 +191,16 @@ body, html {
     background: #ffffff;
 }
 
-#packet-table { width: 100%; 
+#packet-table { 
+    width: 100%; 
     border-collapse: collapse; 
     font-family: 'Consolas', 'Monaco', monospace; 
     font-size: 12px; 
     table-layout: fixed;
- }
+}
 
-#packet-table th { background: #f0f0f0; 
+#packet-table th { 
+    background: #f0f0f0; 
     color: #333; 
     position: sticky; 
     top: 0; 
@@ -208,18 +210,21 @@ body, html {
     text-align: left; 
 }
 
-#packet-table td { padding: 2px 8px; 
+#packet-table td { 
+    padding: 2px 8px; 
     border-right: 1px solid #eee; 
     white-space: nowrap; 
     overflow: hidden;
     text-overflow: ellipsis;
     color: #222;
- }
-.proto-tcp td{ background-color: #e7f4ff !important; }   /* 淺藍 */
-.proto-udp td{ background-color: #ffffd5 !important; }   /* 淺黃 */
-.proto-icmp td{ background-color: #facdff !important; }  /* 淺粉 */
-.proto-http td{ background-color: #e7ffdf !important; }  /* 淺綠 */
-.proto-dns td{ background-color: #e2e2ff !important; }   /* 紫藍 */
+}
+
+.proto-tcp { background-color: #e7f4ff !important; }
+.proto-udp { background-color: #ffffd5 !important; }
+.proto-icmp { background-color: #facdff !important; }
+.proto-http { background-color: #e7ffdf !important; }
+.proto-dns { background-color: #e2e2ff !important; }
+
 /* 系統狀態 (Status) */
 .monitor-grid {
     display: grid;
@@ -348,10 +353,10 @@ body, html {
     position: absolute;
     right: 25px;
     top: 25px;
-    width: 460px; /* 符合設計圖比例的寬度 */
+    width: 460px;
     min-width: 380px;
     min-height: 400px;
-    background-color: #161b22; /* 類似 GitHub Dark / 截圖的深灰藍底色 */
+    background-color: #161b22;
     border: 1px solid #30363d;
     border-radius: 10px;
     z-index: 1000;
@@ -367,10 +372,9 @@ body, html {
     display: none;
 }
 
-/* 拖曳標題列 */
 .radar-header {
     background-color: #0d1117;
-    color: #f0b326; /* 亮黃色警告字體 */
+    color: #f0b326;
     padding: 15px;
     font-size: 1.15em;
     font-weight: 700;
@@ -380,7 +384,6 @@ body, html {
 }
 .radar-header:active { cursor: grabbing; }
 
-/* SVG 動畫區域 */
 #radar-screen {
     flex: 1;
     display: flex;
@@ -389,7 +392,6 @@ body, html {
     border-bottom: 1px solid #30363d;
 }
 
-/* 步驟說明卡片區 */
 .attack-info { 
     padding: 20px; 
     background-color: #161b22;
@@ -403,7 +405,7 @@ body, html {
 }
 
 .radar-step {
-    color: #8b949e; /* 柔和的灰色文字 */
+    color: #8b949e;
     font-size: 0.95em;
     margin-bottom: 8px;
     padding: 12px 15px;
@@ -412,7 +414,7 @@ body, html {
     display: flex;
     align-items: center;
     gap: 15px;
-    background-color: #0d1117; /* 步驟卡片底色深一點 */
+    background-color: #0d1117;
     border-radius: 4px;
 }
 
@@ -422,11 +424,10 @@ body, html {
     text-align: center; 
 }
 
-/* 高亮正在執行的步驟 */
 .radar-step.active {
     color: #c9d1d9;
     border-left: 4px solid #fff;
-    background-color: #21262d; /* 微微亮起的背景 */
+    background-color: #21262d;
     transform: translateX(5px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
@@ -450,27 +451,25 @@ body, html {
     gap: 10px;
 }
 
-/* 通知小方塊 */
 .game-toast {
     background: rgba(0, 0, 0, 0.85);
     padding: 12px 20px;
     border-radius: 4px;
     font-family: 'Courier New', monospace;
     animation: slideIn 0.3s ease-out;
-    /* 這裡把原本寫死的紅色刪掉 */
 }
-/* 紅色 - 警告/危險 (預設) */
+
 .game-toast.danger {
     border-left: 4px solid #ff4444;
     color: #ff4444;
 }
 
-/* 綠色 - 成功/系統訊息 */
 .game-toast.success {
     border-left: 4px solid #00ff00;
     color: #00ff00;
     text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
 }
+
 @keyframes slideIn {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
