@@ -65,38 +65,32 @@ class GameManager {
     }
 
     gameLoop() {
-    // 1. 基礎數值更新
     this.status.timer--;
     this.status.crackProgress += (Math.random() * 0.2 + 0.05); 
 
-    // 2. 獲取收件匣按鈕 (統一使用一種方式，避免重複 const 宣告)
     const allTabs = document.querySelectorAll('.tab-btn');
     const mailBtn = Array.from(allTabs).find(btn => btn.innerText.includes('收件匣'));
 
-    // 3. 處理威脅邏輯
     if (this.activeThreat) {
-        // 每 8 幀執行一次傷害與特效
+
         if (this.status.timer % 8 === 0) {
             this.status.applyDamage(this.activeThreat === 'fishing' ? 'Fishing' : 'Network');
             
             if (this.activeThreat === 'fishing') {
-                this.triggerErrorFlash(); // 螢幕閃紅框
+                this.triggerErrorFlash();
             } else {
                 this.logTerminal(`[系統警告] 未處理的網路威脅 (${this.activeThreat.toUpperCase()})！伺服器負載飆升！`, "alert");
             }
         }
 
-        // 處理側邊欄按鈕閃爍
         if (mailBtn) {
             if (this.activeThreat === 'fishing') {
                 mailBtn.classList.add('mail-warning');
             } else {
-                // 如果威脅不是 fishing，就不閃爍
                 mailBtn.classList.remove('mail-warning');
             }
         }
     } else {
-        // 完全沒有威脅時，清除按鈕閃爍
         if (mailBtn) mailBtn.classList.remove('mail-warning');
     }
 
