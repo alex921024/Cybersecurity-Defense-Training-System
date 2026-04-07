@@ -65,15 +65,40 @@ class GameManager {
     }
 
     gameLoop() {
-        this.status.timer--;
-        this.status.crackProgress += (Math.random() * 0.2 + 0.05); 
+    // 1. 基礎數值更新
+    this.status.timer--;
+    this.status.crackProgress += (Math.random() * 0.2 + 0.05); 
 
-        if (this.activeThreat && this.status.timer % 8 === 0) {
-             this.status.applyDamage(this.activeThreat === 'fishing' ? 'Fishing' : 'Network');
-             if(this.activeThreat !== 'fishing') {
-                 this.logTerminal(`[系統警告] 未處理的網路威脅 (${this.activeThreat.toUpperCase()})！伺服器負載飆升！`, "alert");
-             }
+    // 2. 獲取收件匣按鈕 (統一使用一種方式，避免重複 const 宣告)
+    const allTabs = document.querySelectorAll('.tab-btn');
+    const mailBtn = Array.from(allTabs).find(btn => btn.innerText.includes('收件匣'));
+
+    // 3. 處理威脅邏輯
+    if (this.activeThreat) {
+        // 每 8 幀執行一次傷害與特效
+        if (this.status.timer % 8 === 0) {
+            this.status.applyDamage(this.activeThreat === 'fishing' ? 'Fishing' : 'Network');
+            
+            if (this.activeThreat === 'fishing') {
+                this.triggerErrorFlash(); // 螢幕閃紅框
+            } else {
+                this.logTerminal(`[系統警告] 未處理的網路威脅 (${this.activeThreat.toUpperCase()})！伺服器負載飆升！`, "alert");
+            }
         }
+
+        // 處理側邊欄按鈕閃爍
+        if (mailBtn) {
+            if (this.activeThreat === 'fishing') {
+                mailBtn.classList.add('mail-warning');
+            } else {
+                // 如果威脅不是 fishing，就不閃爍
+                mailBtn.classList.remove('mail-warning');
+            }
+        }
+    } else {
+        // 完全沒有威脅時，清除按鈕閃爍
+        if (mailBtn) mailBtn.classList.remove('mail-warning');
+    }
 
         if (!this.activeThreat && this.status.timer % 12 === 0) {
             this.generateEvent();
@@ -147,7 +172,7 @@ class GameManager {
             if(!mail.read) unread++;
             const div = document.createElement('div');
             let timeWarning = ""; 
-            const limit = 15;
+            const limit = 15; 
             const remaining = limit - (mail.spawnTime - this.status.timer);
             if (remaining >= 0) {
                 timeWarning = ` <span style="color: #FF0000;"> ${remaining}s</span>`;
@@ -207,6 +232,7 @@ class GameManager {
         } 
         else if (action === 'click') {
             if (mail.isMalicious) {
+                this.triggerErrorFlash();
                 this.activeThreat = null; 
                 this.status.applyDamage('Fishing'); 
                 this.status.applyDamage('Fishing'); 
@@ -415,6 +441,17 @@ class GameManager {
         setTimeout(() => toast.remove(), 500);
     }, 3000);
     }
+
+    triggerErrorFlash() {
+    const gameEl = document.getElementById('game-screen');
+    
+    if (gameEl) {
+        gameEl.classList.remove('border-flash-red');
+        void gameEl.offsetWidth;
+        gameEl.classList.add('border-flash-red');
+        }
+    }
+    
 }
 
 export default GameManager;

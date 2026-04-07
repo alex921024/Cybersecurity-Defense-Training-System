@@ -482,3 +482,23 @@ body, html {
 @keyframes fadeOut {
     to { opacity: 0; transform: translateY(-20px); }
 }
+/* 邊框閃爍效果 (攻擊警告) */
+.border-flash-red {
+    animation: border-pulse-red 1s ease-out;
+}
+
+@keyframes border-pulse-red {
+    0% { box-shadow: inset 0 0 0px #ff0000; outline: 0px solid #ff0000; }
+    50% { box-shadow: inset 0 0 40px #ff0000; outline: 4px solid #ff0000; }
+    100% { box-shadow: inset 0 0 0px #ff0000; outline: 0px solid #ff0000; }
+}
+.mail-warning {
+    color: #ff4444 !important;
+    background: rgba(217, 48, 37, 0.1) !important;
+    animation: tab-blink 1s infinite;
+}
+
+@keyframes tab-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
