@@ -90,9 +90,9 @@ class GameManager {
                 mailBtn.classList.remove('mail-warning');
             }
         }
-    } else {
+        } else {
         if (mailBtn) mailBtn.classList.remove('mail-warning');
-    }
+        }
 
         if (!this.activeThreat && this.status.timer % 12 === 0) {
             this.generateEvent();
@@ -155,13 +155,12 @@ class GameManager {
         this.inbox.unshift(newMail); 
         this.renderMailList();
     }
-
-    renderMailList() {
+    // 郵件列表渲染，包含過期警告與樣式變化
+    renderMailList() { 
         const list = document.getElementById('mail-list-container');
         if (!list) return;
         list.innerHTML = '';
         let unread = 0;
-
         this.inbox.forEach(mail => {
             if(!mail.read) unread++;
             const div = document.createElement('div');
@@ -172,8 +171,23 @@ class GameManager {
                 timeWarning = ` <span style="color: #FF0000;"> ${remaining}s</span>`;
                 }else {
                 timeWarning = ` <span style="color: #888;"> 已過期</span>`;
+                if (!mail.punished) { 
+                    mail.punished = true;
+                    // 執行你的警告動作
+                    this.logTerminal(`[系統通知] 信件已過期。`, "alert");
+                    // 如果是惡意郵件觸發畫面閃爍
+                    if (mail.isMalicious) {
+                            this.triggerErrorFlash();
+                        // 釣魚郵件過期扣更多的 CPU 或血量 
+                        this.status.applyDamage('Fishing');
+                        this.logTerminal(`[重大警報] 由於信件未及時處理，負載大幅度提升。`, "System"); 
+                    }else {
+                    // 一般郵件過期扣一點點 CPU 或血量
+                    this.logTerminal(`[重大警報] 由於信件未及時處理，負載提升。`, "System");
+                    this.status.cpu += 5;
+                    }
+                }
             }
-
             div.className = `mail-item ${mail.read ? 'read' : 'unread'}`;
             div.onclick = () => this.viewMail(mail.id);
             div.innerHTML = `<strong>${mail.sender}</strong>${timeWarning}<br><span style="font-size:0.9em">${mail.subject}</span>`;
@@ -219,6 +233,7 @@ class GameManager {
                 this.activeThreat = null; 
                 this.status.reduceLoad(15);
                 this.logTerminal(`[系統通知] 成功刪除惡意釣魚郵件，危機解除。`, "success");
+                this.showNotification("這是一封惡意釣魚郵件，已標示為處理完成。","success");
             }
             this.inbox.splice(mailIndex, 1);
             document.getElementById('mail-viewer-container').innerHTML = '<p style="color:#888; text-align:center; margin-top:50px;">信件已刪除</p>';
