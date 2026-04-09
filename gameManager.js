@@ -37,6 +37,7 @@ class GameManager {
         if (filterEl) {
             filterEl.addEventListener('change', () => this.renderPackets());
         }
+        window.gameManager = this;
     }
 
     init(difficulty) {
@@ -216,8 +217,8 @@ class GameManager {
                 <p>${mail.content.replace(/\n/g, '<br>')}</p>
             </div>
             <div class="mail-actions">
-                <button class="btn-delete" onclick="handleMail(${mail.id}, 'delete')">🗑️ 刪除信件 (安全)</button>
-                <button class="btn-click" onclick="handleMail(${mail.id}, 'click')">🔗 點擊連結 / 回覆 (執行)</button>
+                <button class="btn-delete" onclick="gameManager.handleMail(${mail.id}, 'delete')">🗑️ 刪除信件 (安全)</button>
+                <button class="btn-click" onclick="gameManager.handleMail(${mail.id}, 'click')">🔗 點擊連結 / 回覆 (執行)</button>
             </div>
         `;
     }
@@ -450,16 +451,22 @@ class GameManager {
         setTimeout(() => toast.remove(), 500);
     }, 3000);
     }
-
+    //
     triggerErrorFlash() {
     const gameEl = document.getElementById('game-screen');
     
     if (gameEl) {
-        gameEl.classList.remove('border-flash-red');
-        void gameEl.offsetWidth;
-        gameEl.classList.add('border-flash-red');
-        }
+        console.log("觸發全螢幕崩潰閃爍！");
+        gameEl.classList.remove('screen-crash-active');
+        void gameEl.offsetWidth; 
+        gameEl.classList.add('screen-crash-active');
+        setTimeout(() => {
+            gameEl.classList.remove('screen-crash-active');
+        }, 650);
+    } else {
+        console.error("找不到 ID 為 'game-screen' 的元素，無法觸發閃爍！");
     }
+}
     
 }
 
