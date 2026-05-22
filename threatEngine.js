@@ -1,4 +1,3 @@
-
 import GameDB from './database.js';
 
 class ThreatEngine {

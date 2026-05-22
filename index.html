@@ -29,6 +29,7 @@
             <div class="sidebar-header">防禦中心</div>
             <nav class="tab-menu">
                 <button class="tab-btn active" onclick="switchTab(event, 'tab-terminal')">🖥️ 控制台</button>
+                <button class="tab-btn" onclick="switchTab(event, 'tab-firewall')">🛡️ 防火牆中心</button>
                 <button class="tab-btn" onclick="switchTab(event, 'tab-status')">📈 系統狀態</button>
                 <button class="tab-btn" onclick="switchTab(event, 'tab-mailbox')">📧 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">0</span></button>
                 <button class="tab-btn" onclick="switchTab(event, 'tab-manual')">📘 指令手冊</button>
@@ -38,7 +39,7 @@
 
         <main id="tab-content-container">
             <div id="tab-terminal" class="tab-content active">
-                <section id="terminal-section">
+                <section id="terminal-section" style="height: 100%;">
                     <h3>指令控制台 (root@sec-server:~#)</h3>
                     <div id="terminal-output"></div>
                     <div class="input-line">
@@ -48,81 +49,104 @@
                     <div class="quick-commands">
                         <span class="cmd-tag" onclick="quickCmd('status')">status</span>
                         <span class="cmd-tag" onclick="quickCmd('netstat')">netstat</span>
+                        <span class="cmd-tag" onclick="quickCmd('whois udp')">whois udp</span>
                         <span class="cmd-tag" onclick="quickCmd('block ip')">block ip</span>
                         <span class="cmd-tag" onclick="quickCmd('passwd')">passwd</span>
                     </div>
                 </section>
-                
-                <section id="analysis-section">
-                    <div class="analysis-header">
-                        <h3>即時流量監控 (Wireshark)</h3>
-                        <select id="protocol-filter">
-                            <option value="ALL">全部 (ALL)</option>
-                            <option value="TCP">TCP</option>
-                            <option value="UDP">UDP</option>
-                            <option value="ICMP">ICMP</option>
-                            <option value="DNS">DNS</option>
-                        </select>
+            </div>
+            
+            <div id="tab-firewall" class="tab-content">
+                <h2 class="tab-title">🛡️ 防火牆與入侵偵測中心 (Firewall & IDS)</h2>
+                <div class="firewall-layout">
+                    <div class="firewall-left">
+                        <section id="analysis-section">
+                            <div class="analysis-header">
+                                <h3>即時流量監控 (Wireshark)</h3>
+                                <select id="protocol-filter">
+                                    <option value="ALL">全部 (ALL)</option>
+                                    <option value="TCP">TCP</option>
+                                    <option value="UDP">UDP</option>
+                                    <option value="ICMP">ICMP</option>
+                                    <option value="DNS">DNS</option>
+                                </select>
+                            </div>
+                            <div class="scroll-box">
+                                <table id="packet-table">
+                                    <thead><tr><th>時間</th><th>來源 IP</th><th>來源 Port</th><th>目標 IP</th><th>目標 Port</th><th>協定</th><th>長度</th><th>資訊</th></tr></thead>
+                                    <tbody id="packet-list"></tbody>
+                                </table>
+                            </div>
+                        </section>
                     </div>
-                    <div class="scroll-box">
-                        <table id="packet-table">
-                            <thead><tr><th>時間</th><th>來源 IP</th><th>來源 Port</th><th>目標 IP</th><th>目標 Port</th><th>協定</th><th>長度</th><th>資訊</th></tr></thead>
-                            <tbody id="packet-list"></tbody>
-                        </table>
+                    
+                    <div class="firewall-right">
+                        <div class="firewall-card alert-card">
+                            <h3><i class="fas fa-bell"></i> IDS 即時警報日誌</h3>
+                            <div id="ids-alert-log" class="log-box">系統監控中，目前無異常活動...</div>
+                        </div>
+                        
+                        <div class="firewall-card analysis-card">
+                            <h3><i class="fas fa-search"></i> 威脅情報分析儀 (SOP 認證)</h3>
+                            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                <input type="text" id="analyzer-input" placeholder="輸入可疑 IP 或 協定 (如 udp, dns)..." 
+                                       style="flex: 1; background: #111; border: 1px solid #333; color: #00FF00; padding: 8px; font-family: monospace;">
+                                <button class="manual-btn" style="margin: 0; padding: 8px 15px; background: #1a73e8; color: #fff;" onclick="analyzeGUI()">分析 (Whois)</button>
+                            </div>
+                            <div id="analyzer-result" class="log-box" style="height: 60px; color: #00ebff;">
+                                等待輸入分析目標...
+                            </div>
+                        </div>
+
+                        <div class="firewall-card control-card">
+                            <h3><i class="fas fa-sliders-h"></i> 策略快捷防禦開關 (需先分析)</h3>
+                            <div class="policy-grid">
+                                <button class="policy-btn" id="btn-mitigate-udp" onclick="guiMitigate('udp')">阻斷 UDP 流量</button>
+                                <button class="policy-btn" id="btn-mitigate-icmp" onclick="guiMitigate('icmp')">阻斷 ICMP 流量</button>
+                                <button class="policy-btn" id="btn-mitigate-dns" onclick="guiMitigate('dns')">清除 DNS 快取</button>
+                                <button class="policy-btn" id="btn-mitigate-ip" onclick="guiMitigate('ip')">封鎖惡意來源 IP</button>
+                            </div>
+                        </div>
+                        
+                        <div class="firewall-card rules-card">
+                            <h3><i class="fas fa-list"></i> 當前防火牆規則 (ACL)</h3>
+                            <div class="scroll-box" style="background:#111; height: 120px;">
+                                <table class="manual-table" style="margin:0; font-size:13px;">
+                                    <thead>
+                                        <tr><th>規則 ID</th><th>標的</th><th>動作</th><th>狀態</th></tr>
+                                    </thead>
+                                    <tbody id="acl-rules-body">
+                                        <tr><td colspan="4" style="text-align:center; color:#666;">尚無自訂過濾規則</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
-                </section>
+                </div>
             </div>
             
             <div id="tab-status" class="tab-content">
                 <h2 class="tab-title">🖥️ 系統硬體即時監控中心</h2>
-                
-                <div class="time-banner">
-                    🕒 剩餘時間: <span id="timer">--</span>
-                </div>
-
+                <div class="time-banner">🕒 剩餘時間: <span id="timer">--</span></div>
                 <div class="monitor-grid">
                     <div class="chart-box">
-                        <div class="chart-header">
-                            <span>CPU 使用率</span>
-                            <span class="live-indicator"></span>
-                        </div>
-                        <div class="chart-body">
-                            <canvas id="cpuChart"></canvas>
-                        </div>
+                        <div class="chart-header"><span>CPU 使用率</span><span class="live-indicator"></span></div>
+                        <div class="chart-body"><canvas id="cpuChart"></canvas></div>
                         <div class="chart-footer">負載: <span id="cpu-load">0</span>%</div>
                     </div>
-
                     <div class="chart-box">
-                        <div class="chart-header">
-                            <span>GPU 使用率</span>
-                            <span class="live-indicator"></span>
-                        </div>
-                        <div class="chart-body">
-                            <canvas id="gpuChart"></canvas>
-                        </div>
+                        <div class="chart-header"><span>GPU 使用率</span><span class="live-indicator"></span></div>
+                        <div class="chart-body"><canvas id="gpuChart"></canvas></div>
                         <div class="chart-footer">負載: <span id="gpu-load">0</span>%</div>
                     </div>
-
                     <div class="chart-box">
-                        <div class="chart-header">
-                            <span>RAM 使用率</span>
-                            <span class="live-indicator"></span>
-                        </div>
-                        <div class="chart-body">
-                            <canvas id="ramChart"></canvas>
-                        </div>
+                        <div class="chart-header"><span>RAM 使用率</span><span class="live-indicator"></span></div>
+                        <div class="chart-body"><canvas id="ramChart"></canvas></div>
                         <div class="chart-footer">負載: <span id="ram-load">0</span>%</div>
                     </div>
-
                     <div class="chart-box danger-box">
-                        <div class="chart-header">
-                            <span style="color: #FF3333;">密碼破解進度</span>
-                            <span class="live-indicator danger-pulse"></span>
-                        </div>
-                        <div class="chart-body">
-                            <canvas id="hackChart"></canvas>
-                        </div>
-                        
+                        <div class="chart-header"><span style="color: #FF3333;">密碼破解進度</span><span class="live-indicator danger-pulse"></span></div>
+                        <div class="chart-body"><canvas id="hackChart"></canvas></div>
                         <div class="chart-footer" style="color: #FF3333;">進度: <span id="crack-progress">0</span>%</div>
                     </div>
                 </div>
@@ -142,40 +166,15 @@
                 <h2 class="tab-title">系統指令參考手冊 (Cheat Sheet)</h2>
                 <div class="scroll-box">
                     <table class="manual-table">
-                        <thead>
-                            <tr><th>指令</th><th>範例寫法</th><th>功能說明</th></tr>
-                        </thead>
+                        <thead><tr><th>指令</th><th>功能說明</th></tr></thead>
                         <tbody>
-                            <tr><td><code>status</code></td><td><code>status</code></td><td>查看系統詳細負載狀態與密碼破解進度。</td></tr>
-                            <tr><td><code>netstat</code></td><td><code>netstat</code></td><td>顯示當前網路連線，若有 DDoS 或異常流量會跳出警告。</td></tr>
-                            <tr><td><code>block</code></td><td><code>block udp</code><br><code>block ip</code></td><td>設定防火牆。封鎖對應的協定或 IP。</td></tr>
-                            <tr><td><code>flush-dns</code></td><td><code>flush-dns</code></td><td>清除 DNS 快取。遭遇 DNS 攻擊或網址嫁接時使用。</td></tr>
-                            <tr><td><code>scan-mail</code></td><td><code>scan-mail</code></td><td>自動掃描並隔離收件匣中的惡意釣魚信件。</td></tr>
-                            <tr><td><code>passwd</code></td><td><code>passwd</code></td><td>強制重置系統管理員密碼，將「破解進度」歸零。</td></tr>
-                        </tbody>
-                    </table>
-
-                    <h3 style="color: #00FF00; margin-top: 30px; border-bottom: 1px solid #444; padding-bottom: 5px;">⚠️ 常見攻擊處置指南 (SOP)</h3>
-                    <table class="manual-table">
-                        <thead>
-                            <tr><th>攻擊類型</th><th>特徵與處置方式</th><th>指令範例</th></tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td style="color: #00FF00; font-weight: bold;">SYN / ICMP Flood</td>
-                                <td>【特徵】netstat 顯示大量異常封包。<br>【處置】封鎖惡意來源 IP，或擋下 Ping 洪水。</td>
-                                <td><code class="cmd-tag-mini" onclick="quickCmd('block ip')">block ip</code></td>
-                            </tr>
-                            <tr>
-                                <td style="color: #00FF00; font-weight: bold;">UDP Flood</td>
-                                <td>【特徵】Wireshark 出現大量紅色的 UDP 封包。<br>【處置】直接封鎖 UDP 流量。</td>
-                                <td><code class="cmd-tag-mini" onclick="quickCmd('block udp')">block udp</code></td>
-                            </tr>
-                            <tr>
-                                <td style="color: #00FF00; font-weight: bold;">DNS 放大攻擊</td>
-                                <td>【特徵】頻寬滿載，Wireshark 顯示異常 DNS 請求。<br>【處置】清除被污染的 DNS 快取。</td>
-                                <td><code class="cmd-tag-mini" onclick="quickCmd('flush-dns')">flush-dns</code></td>
-                            </tr>
+                            <tr><td><code>status</code></td><td>查看系統詳細負載狀態與密碼破解進度。</td></tr>
+                            <tr><td><code>netstat</code></td><td>顯示當前網路連線，若有 DDoS 或異常流量會跳出警告。</td></tr>
+                            <tr><td><code style="color: #00ebff;">whois [IP/協定]</code></td><td>(重要) 分析可疑目標，取得授權。範例：<code>whois udp</code></td></tr>
+                            <tr><td><code>block [IP/協定]</code></td><td>設定防火牆。需先完成分析才可封鎖。</td></tr>
+                            <tr><td><code>flush-dns</code></td><td>清除 DNS 快取。遭受污染時使用。</td></tr>
+                            <tr><td><code>scan-mail</code></td><td>自動掃描並隔離惡意釣魚信件。</td></tr>
+                            <tr><td><code>passwd</code></td><td>強制重置系統密碼，將破解進度歸零。</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -186,9 +185,9 @@
     <div id="tutorial-modal" class="modal hidden">
         <div class="modal-content" style="border: 2px solid #FFA500;">
             <h2 style="color: #FFA500;">🛡️ 任務簡報</h2>
-            <p>確保系統負載不超過 100%，並在時間結束前阻止破解。</p>
-            <button class="manual-btn" style="color: #ffffff;background-color: #0fe70f;" onclick="confirmStart()">確認了解，開始訓練</button>
-            <button class="btn-cancel" style="color: #e2e2e2 ;background-color: #e00f0f;" onclick="breaktoDifficulty()">我再想想</button>
+            <p>確保系統不崩潰。防禦 SOP：發現異常 ➡️ Whois 分析 ➡️ 部署規則封鎖。</p>
+            <button class="manual-btn" style="color: #ffffff;background-color: #0fe70f;" onclick="confirmStart()">確認了解</button>
+            <button class="btn-cancel" style="color: #e2e2e2 ;background-color: #e00f0f;" onclick="breaktoDifficulty()">返回</button>
         </div>
     </div>
 
@@ -201,11 +200,9 @@
     </div>
 
     <script src="threatRadar.js"></script>
-    
     <script type="module">
         import GameManager from './gameManager.js';
         window.gameManagerInstance = new GameManager();
-
         window.selectedDifficulty = 0;
 
         window.switchTab = (evt, tabId) => {
@@ -215,20 +212,11 @@
             if (evt) evt.currentTarget.classList.add('active');
             
             if (tabId === 'tab-status' && window.gameManagerInstance && window.gameManagerInstance.charts) {
-                const charts = window.gameManagerInstance.charts;
-                Object.values(charts).forEach(chart => {
-                    if (chart) chart.resize();
-                });
+                Object.values(window.gameManagerInstance.charts).forEach(chart => { if (chart) chart.resize(); });
             }
-
-            // ✅ 新增：控制雷達面板只在「控制台 (tab-terminal)」顯示
             const radarPanel = document.getElementById('threat-radar-panel');
             if (radarPanel) {
-                if (tabId === 'tab-terminal') {
-                    radarPanel.style.display = 'flex'; // 在控制台顯示
-                } else {
-                    radarPanel.style.display = 'none'; // 在其他分頁隱藏
-                }
+                radarPanel.style.display = (tabId === 'tab-terminal' || tabId === 'tab-firewall') ? 'flex' : 'none';
             }
         };
 
@@ -238,7 +226,6 @@
         };
 
         window.breakmenu = () => {
-            document.getElementById('tutorial-modal').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('active');
             document.getElementById('menu-screen').classList.add('active');
             document.getElementById('entry-content').classList.remove('hidden');
@@ -260,7 +247,7 @@
 
         window.confirmStart = () => {
             document.getElementById('tutorial-modal').classList.add('hidden');
-            window.switchTab(null, 'tab-terminal'); // 遊戲開始預設切換到控制台
+            window.switchTab(null, 'tab-terminal');
             window.gameManagerInstance.init(window.selectedDifficulty);
         };
 
@@ -268,6 +255,15 @@
             const input = document.getElementById('cmd-input');
             input.value = cmd; input.focus();
             input.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Enter'}));
+        };
+
+        window.guiMitigate = (type) => {
+            if (window.gameManagerInstance) window.gameManagerInstance.guiMitigate(type);
+        };
+        
+        window.analyzeGUI = () => {
+            const input = document.getElementById('analyzer-input').value;
+            if (window.gameManagerInstance) window.gameManagerInstance.analyzeThreat(input);
         };
 
         window.quitGame = () => { if(confirm("確定放棄？")) location.reload(); };

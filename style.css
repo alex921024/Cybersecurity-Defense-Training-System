@@ -1,525 +1,114 @@
-/* =========================================
-   全域設定與變數
-========================================= */
 :root {
-    --bg-color: #0a0a0a;
-    --sidebar-color: #151515;
-    --terminal-green: #00FF00;
-    --warning-orange: #FFA500;
-    --danger-red: #d93025;
-    --border-color: #333;
-    --win11-blue: #00ebff;
+    --bg-color: #0a0a0a; --sidebar-color: #151515; --terminal-green: #00FF00;
+    --warning-orange: #FFA500; --danger-red: #d93025; --border-color: #333; --win11-blue: #00ebff;
 }
-
-body, html {
-    margin: 0; padding: 0; height: 100%;
-    background-color: var(--bg-color);
-    color: var(--terminal-green);
-    font-family: 'Courier New', Courier, monospace;
-    overflow: hidden; 
-}
-
+body, html { margin: 0; padding: 0; height: 100%; background-color: var(--bg-color); color: var(--terminal-green); font-family: 'Courier New', Courier, monospace; overflow: hidden; }
 .screen { display: none; height: 100vh; width: 100vw; }
 .screen.active { display: flex; }
 .hidden { display: none !important; }
 
-/* 主選單畫面 */
-#menu-screen { 
-    flex-direction: column;
-    align-items: center; 
-    justify-content: center; 
-}
-#menu-screen h1 { 
-    font-size: 3em; 
-    text-shadow: 0 0 10px var(--terminal-green); 
-    margin-bottom: 40px; 
-}
-.menu-options button { 
-    display: block; 
-    width: 300px; 
-    margin: 10px auto; 
-    padding: 15px; 
-    background: #111; 
-    color: var(--terminal-green); 
-    border: 1px solid var(--terminal-green); 
-    cursor: pointer; 
-    transition: 0.3s;
-}
-.menu-options button:hover { 
-    background: var(--terminal-green); 
-    color: #000; 
-    box-shadow: 0 0 10px var(--terminal-green); 
-}
+#menu-screen { flex-direction: column; align-items: center; justify-content: center; }
+#menu-screen h1 { font-size: 3em; text-shadow: 0 0 10px var(--terminal-green); margin-bottom: 40px; }
+.menu-options button { display: block; width: 300px; margin: 10px auto; padding: 15px; background: #111; color: var(--terminal-green); border: 1px solid var(--terminal-green); cursor: pointer; transition: 0.3s; }
+.menu-options button:hover { background: var(--terminal-green); color: #000; box-shadow: 0 0 10px var(--terminal-green); }
 
-/* 遊戲主畫面佈局 */
 #game-screen { display: flex; }
-
-#game-sidebar {
-    width: 220px;
-    background: var(--sidebar-color);
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-}
-
-.sidebar-header {
-    padding: 20px;
-    font-size: 1.2em;
-    font-weight: bold;
-    text-align: center;
-    border-bottom: 1px solid var(--border-color);
-    color: #fff;
-}
-
-.tab-menu {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 10px 0;
-}
-
-.tab-btn {
-    background: transparent;
-    border: none;
-    color: #888;
-    padding: 15px 20px;
-    text-align: left;
-    font-family: inherit;
-    font-size: 1em;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
+#game-sidebar { width: 220px; background: var(--sidebar-color); border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+.sidebar-header { padding: 20px; font-size: 1.2em; font-weight: bold; text-align: center; border-bottom: 1px solid var(--border-color); color: #fff; }
+.tab-menu { flex: 1; display: flex; flex-direction: column; padding: 10px 0; }
+.tab-btn { background: transparent; border: none; color: #888; padding: 15px 20px; text-align: left; font-family: inherit; font-size: 1em; cursor: pointer; transition: 0.2s; }
 .tab-btn:hover { color: var(--terminal-green); background: #222; }
-.tab-btn.active {
-    color: var(--terminal-green);
-    background: #1e1e1e;
-    border-left: 4px solid var(--terminal-green);
-}
+.tab-btn.active { color: var(--terminal-green); background: #1e1e1e; border-left: 4px solid var(--terminal-green); }
+.quit-btn { margin: 20px; background: var(--danger-red); color: white; border: none; padding: 10px; cursor: pointer; font-weight: bold; }
 
-.quit-btn {
-    margin: 20px;
-    background: var(--danger-red);
-    color: white;
-    border: none;
-    padding: 10px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-#tab-content-container {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-    background: #000;
-}
-
-.tab-content {
-    display: none;
-    width: 100%;
-    height: 100%;
-    padding: 20px;
-    box-sizing: border-box;
-    flex-direction: column;
-}
+#tab-content-container { flex: 1; position: relative; overflow: hidden; background: #000; }
+.tab-content { display: none; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; flex-direction: column; }
 .tab-content.active { display: flex; }
 
-/* 終端機 (Terminal) */
 #tab-terminal { gap: 15px; }
-
-#terminal-section {
-    flex: 1;
-    background: #000;
-    border: 1px solid #444;
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-}
-
-#terminal-output {
-    flex: 1;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    font-size: 0.95em;
-    line-height: 1.4;
-    padding-right: 5px;
-}
-
-.input-line {
-    display: flex;
-    align-items: center;
-    border-top: 1px solid #333;
-    padding-top: 10px;
-}
-
-#cmd-input {
-    background: transparent;
-    border: none;
-    color: var(--terminal-green);
-    outline: none;
-    width: 100%;
-    font-family: inherit;
-}
-
+#terminal-section { flex: 1; background: #000; border: 1px solid #444; padding: 15px; display: flex; flex-direction: column; min-height: 0; }
+#terminal-output { flex: 1; overflow-y: auto; white-space: pre-wrap; font-size: 0.95em; line-height: 1.4; padding-right: 5px; }
+.input-line { display: flex; align-items: center; border-top: 1px solid #333; padding-top: 10px; }
+#cmd-input { background: transparent; border: none; color: var(--terminal-green); outline: none; width: 100%; font-family: inherit; }
 .quick-commands { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
-.cmd-tag, .cmd-tag-mini {
-    background: #222;
-    color: var(--warning-orange);
-    border: 1px solid #444;
-    padding: 4px 8px;
-    cursor: pointer;
-    font-size: 0.85em;
-    border-radius: 3px;
-}
+.cmd-tag, .cmd-tag-mini { background: #222; color: var(--warning-orange); border: 1px solid #444; padding: 4px 8px; cursor: pointer; font-size: 0.85em; border-radius: 3px; }
 .cmd-tag:hover { background: var(--warning-orange); color: #000; }
 
-/* Wireshark 表格區 */
-#analysis-section {
-    height: 40%;
-    background: #111;
-    border: 1px solid #444;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-}
+.firewall-layout { display: flex; gap: 20px; flex: 1; height: calc(100% - 50px); min-height: 0; }
+.firewall-left { width: 52%; display: flex; flex-direction: column; height: 100%; }
+.firewall-right { width: 48%; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; padding-right: 5px; }
+.firewall-card { background: #0d0d0d; border: 1px solid #252525; border-radius: 6px; padding: 15px; display: flex; flex-direction: column; }
+.firewall-card h3 { margin: 0 0 10px 0; color: #ffffff; font-size: 1.05em; border-bottom: 1px solid #222; padding-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.log-box { background: #030303; border: 1px solid #1a1a1a; padding: 10px; font-size: 0.85em; font-family: monospace; height: 75px; overflow-y: auto; white-space: pre-wrap; color: #ffaa00; }
+.policy-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.policy-btn { background: #121212; color: var(--terminal-green); border: 1px solid #333; padding: 12px; cursor: pointer; border-radius: 4px; font-family: inherit; font-weight: bold; transition: all 0.2s; text-align: center; }
+.policy-btn:hover { background: var(--terminal-green); color: #000; box-shadow: 0 0 8px var(--terminal-green); }
+.policy-btn.active-policy { background: #d93025 !important; color: #fff !important; border-color: #ff4444 !important; animation: tab-blink 1s infinite; }
 
-.scroll-box {
-    flex: 1;
-    overflow-y: auto;
-    border: 1px solid #333;
-    background: #ffffff;
-}
+#tab-firewall #analysis-section { height: 100% !important; }
+#analysis-section { height: 100%; background: #111; border: 1px solid #444; padding: 10px; display: flex; flex-direction: column; }
+.scroll-box { flex: 1; overflow-y: auto; border: 1px solid #333; background: #ffffff; }
+#packet-table { width: 100%; border-collapse: collapse; font-family: 'Consolas', monospace; font-size: 12px; table-layout: fixed; }
+#packet-table th { background: #f0f0f0; color: #333; position: sticky; top: 0; padding: 4px 8px; border: 1px solid #ccc; font-weight: normal; text-align: left; }
+#packet-table td { padding: 2px 8px; border-right: 1px solid #eee; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #222; }
+.proto-tcp { background-color: #e7f4ff !important; } .proto-udp { background-color: #ffffd5 !important; }
+.proto-icmp { background-color: #facdff !important; } .proto-http { background-color: #e7ffdf !important; } .proto-dns { background-color: #e2e2ff !important; }
+.packet-danger { background-color: rgba(217, 48, 37, 0.2) !important; } .packet-danger td { color: #d93025 !important; font-weight: bold; }
 
-#packet-table { 
-    width: 100%; 
-    border-collapse: collapse; 
-    font-family: 'Consolas', 'Monaco', monospace; 
-    font-size: 12px; 
-    table-layout: fixed;
-}
+.monitor-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 15px; background: #000; border-radius: 5px; margin-top: 15px; }
+.chart-box { background-color: #0c0c0c; border: 1px solid #333; padding: 12px; border-radius: 4px; position: relative; transition: 0.3s; }
+.chart-body { height: 150px; position: relative; background-image: linear-gradient(#1a1a1a 1px, transparent 1px), linear-gradient(90deg, #1a1a1a 1px, transparent 1px); background-size: 20px 20px; border: 1px solid #222; }
+.chart-header { display: flex; justify-content: space-between; font-size: 0.85em; margin-bottom: 5px; color: #ccc; }
+.chart-body canvas { display: block; width: 100% !important; height: 100% !important; }
+.chart-footer { text-align: right; font-size: 1.2em; font-weight: bold; margin-top: 8px; font-family: monospace; }
+#cpu-load { color: #00ebff; } #gpu-load { color: #00FF00; } #ram-load { color: #FFFF00; }
+.danger-box { border-color: #611 !important; } .danger-box .chart-footer, .danger-box .chart-header { color: #ff3333; }
 
-#packet-table th { 
-    background: #f0f0f0; 
-    color: #333; 
-    position: sticky; 
-    top: 0; 
-    padding: 4px 8px; 
-    border: 1px solid #ccc;
-    font-weight: normal;
-    text-align: left; 
-}
-
-#packet-table td { 
-    padding: 2px 8px; 
-    border-right: 1px solid #eee; 
-    white-space: nowrap; 
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: #222;
-}
-
-.proto-tcp { background-color: #e7f4ff !important; }
-.proto-udp { background-color: #ffffd5 !important; }
-.proto-icmp { background-color: #facdff !important; }
-.proto-http { background-color: #e7ffdf !important; }
-.proto-dns { background-color: #e2e2ff !important; }
-
-/* 系統狀態 (Status) */
-.monitor-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-    padding: 15px;
-    background: #000;
-    border-radius: 5px;
-    margin-top: 15px;
-}
-
-.chart-box {
-    background-color: #0c0c0c;
-    border: 1px solid #333;
-    padding: 12px;
-    border-radius: 4px;
-    position: relative;
-    transition: 0.3s;
-}
-
-.chart-body {
-    height: 150px;
-    position: relative;
-    background-image: 
-        linear-gradient(#1a1a1a 1px, transparent 1px),
-        linear-gradient(90deg, #1a1a1a 1px, transparent 1px);
-    background-size: 20px 20px;
-    border: 1px solid #222;
-}
-
-.chart-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.85em;
-    margin-bottom: 5px;
-    color: #ccc;
-}
-
-.chart-footer {
-    text-align: right;
-    font-size: 1.2em;
-    font-weight: bold;
-    margin-top: 8px;
-    font-family: monospace;
-}
-
-#cpu-load { color: var(--win11-blue); }
-#gpu-load { color: #00FF00; }
-#ram-load { color: #FFFF00; }
-
-.danger-box { border-color: #611 !important; }
-.danger-box .chart-footer { color: #ff3333; }
-.danger-box .chart-header { color: #ff3333; }
-
-/* 收件匣 (Gmail 風格) */
-.mail-layout {
-    display: flex;
-    height: calc(100% - 60px);
-    background: #fff; 
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.mail-list {
-    width: 35%;
-    border-right: 1px solid #ddd;
-    overflow-y: auto;
-    background: #fff;
-    color: #333;
-}
-
-.mail-item {
-    border-bottom: 1px solid #e0e0e0;
-    padding: 12px 15px;
-    position: relative;
-    transition: background 0.2s;
-}
-
-.mail-item.unread { 
-    background: #f2f6fc; border-left: 4px solid #1a73e8; font-weight: bold; 
-}
-
-.mail-viewer {
-    width: 65%;
-    padding: 30px;
-    background: #fff;
-    color: #333;
-    overflow-y: auto;
-}
-
+.mail-layout { display: flex; height: calc(100% - 60px); background: #fff; border-radius: 8px; overflow: hidden; }
+.mail-list { width: 35%; border-right: 1px solid #ddd; overflow-y: auto; background: #fff; color: #333; }
+.mail-item { border-bottom: 1px solid #e0e0e0; padding: 12px 15px; position: relative; transition: background 0.2s; }
+.mail-item.unread { background: #f2f6fc; border-left: 4px solid #1a73e8; font-weight: bold; }
+.mail-viewer { width: 65%; padding: 30px; background: #fff; color: #333; overflow-y: auto; }
 .mail-header h3 { color: #202124; margin: 0; padding-bottom: 10px; border-bottom: 1px solid #eee; }
 .mail-actions { margin-top: 20px; display: flex; gap: 10px; }
 .btn-delete { background: #d93025; color: #fff; border: none; padding: 10px; cursor: pointer; border-radius: 4px; }
 .btn-click { background: #1a73e8; color: #fff; border: none; padding: 10px; cursor: pointer; border-radius: 4px; }
 
-/* 指令手冊 */
 .manual-table { width: 100%; border-collapse: collapse; background: #0a0a0a; }
 .manual-table th { background: #1a1a1a; color: var(--terminal-green); padding: 12px; border: 1px solid #333; }
 .manual-table td { padding: 12px; border: 1px solid #333; color: #ccc; }
 .manual-table code { background: #000; color: var(--warning-orange); padding: 3px 6px; border: 1px solid #444; }
 
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: #111; }
-::-webkit-scrollbar-thumb { background: var(--terminal-green); border-radius: 4px; }
+::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-track { background: #111; } ::-webkit-scrollbar-thumb { background: var(--terminal-green); border-radius: 4px; }
 
-/* 彈出視窗 */
-.modal {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    display: flex; justify-content: center; align-items: center;
-    z-index: 9999;
-}
-.modal-content {
-    background: #111;
-    border: 2px solid var(--terminal-green);
-    padding: 30px;
-    max-width: 600px;
-    text-align: center;
-}
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; }
+.modal-content { background: #111; border: 2px solid var(--terminal-green); padding: 30px; max-width: 600px; text-align: center; }
 .manual-btn, .btn-cancel { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin: 10px;}
 
-/* =========================================
-   ✅ 精緻化：即時威脅雷達面板 (比照設計圖)
-========================================= */
-#threat-radar-panel {
-    position: absolute;
-    right: 25px;
-    top: 25px;
-    width: 460px;
-    min-width: 380px;
-    min-height: 400px;
-    background-color: #161b22;
-    border: 1px solid #30363d;
-    border-radius: 10px;
-    z-index: 1000;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
-    display: flex;
-    flex-direction: column;
-    resize: both;
-    overflow: hidden;
-}
-
-#menu-screen.active ~ #threat-radar-panel {
-    display: none;
-}
-
-.radar-header {
-    background-color: #0d1117;
-    color: #f0b326;
-    padding: 15px;
-    font-size: 1.15em;
-    font-weight: 700;
-    border-bottom: 1px solid #30363d;
-    cursor: grab;
-    user-select: none;
-}
+#threat-radar-panel { position: absolute; right: 25px; top: 25px; width: 460px; min-width: 380px; min-height: 400px; background-color: #161b22; border: 1px solid #30363d; border-radius: 10px; z-index: 1000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; box-shadow: 0 10px 30px rgba(0,0,0,0.8); display: flex; flex-direction: column; resize: both; overflow: hidden; }
+#menu-screen.active ~ #threat-radar-panel { display: none; }
+.radar-header { background-color: #0d1117; color: #f0b326; padding: 15px; font-size: 1.15em; font-weight: 700; border-bottom: 1px solid #30363d; cursor: grab; user-select: none; }
 .radar-header:active { cursor: grabbing; }
+#radar-screen { flex: 1; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #30363d; }
+.attack-info { padding: 20px; background-color: #161b22; }
+#attack-type-title { color: #00ebff; font-size: 1.25em; font-weight: bold; margin-bottom: 15px; }
+.radar-step { color: #8b949e; font-size: 0.95em; margin-bottom: 8px; padding: 12px 15px; border-left: 4px solid transparent; transition: all 0.3s ease; display: flex; align-items: center; gap: 15px; background-color: #0d1117; border-radius: 4px; }
+.radar-step i { font-size: 1.2em; width: 25px; text-align: center; }
+.radar-step.active { color: #c9d1d9; border-left: 4px solid #fff; background-color: #21262d; transform: translateX(5px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+.pulse-icon { animation: alert-pulse 1s infinite alternate; }
+@keyframes alert-pulse { from { opacity: 1; transform: scale(1); } to { opacity: 0.6; transform: scale(1.15); } }
 
-#radar-screen {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-bottom: 1px solid #30363d;
-}
+#game-notification-container { position: absolute; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+.game-toast { background: rgba(0, 0, 0, 0.85); padding: 12px 20px; border-radius: 4px; font-family: 'Courier New', monospace; animation: slideIn 0.3s ease-out; }
+.game-toast.danger { border-left: 4px solid #ff4444; color: #ff4444; }
+.game-toast.success { border-left: 4px solid #00ff00; color: #00ff00; text-shadow: 0 0 5px rgba(0, 255, 0, 0.5); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.toast-fade-out { animation: fadeOut 0.5s ease-in forwards; }
+@keyframes fadeOut { to { opacity: 0; transform: translateY(-20px); } }
 
-.attack-info { 
-    padding: 20px; 
-    background-color: #161b22;
-}
-
-#attack-type-title {
-    color: #00ebff;
-    font-size: 1.25em;
-    font-weight: bold;
-    margin-bottom: 15px;
-}
-
-.radar-step {
-    color: #8b949e;
-    font-size: 0.95em;
-    margin-bottom: 8px;
-    padding: 12px 15px;
-    border-left: 4px solid transparent;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    background-color: #0d1117;
-    border-radius: 4px;
-}
-
-.radar-step i { 
-    font-size: 1.2em; 
-    width: 25px; 
-    text-align: center; 
-}
-
-.radar-step.active {
-    color: #c9d1d9;
-    border-left: 4px solid #fff;
-    background-color: #21262d;
-    transform: translateX(5px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.pulse-icon {
-    animation: alert-pulse 1s infinite alternate;
-}
-
-@keyframes alert-pulse {
-    from { opacity: 1; transform: scale(1); }
-    to { opacity: 0.6; transform: scale(1.15); }
-}
-
-#game-notification-container {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.game-toast {
-    background: rgba(0, 0, 0, 0.85);
-    padding: 12px 20px;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    animation: slideIn 0.3s ease-out;
-}
-
-.game-toast.danger {
-    border-left: 4px solid #ff4444;
-    color: #ff4444;
-}
-
-.game-toast.success {
-    border-left: 4px solid #00ff00;
-    color: #00ff00;
-    text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
-}
-
-@keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-
-.toast-fade-out {
-    animation: fadeOut 0.5s ease-in forwards;
-}
-
-@keyframes fadeOut {
-    to { opacity: 0; transform: translateY(-20px); }
-}
-/* 邊框閃爍效果 (攻擊警告) */
-.border-flash-red {
-    animation: border-pulse-red 1s ease-out;
-}
-
-@keyframes border-pulse-red {
-    0% { box-shadow: inset 0 0 0px #ff0000; outline: 0px solid #ff0000; }
-    50% { box-shadow: inset 0 0 40px #ff0000; outline: 4px solid #ff0000; }
-    100% { box-shadow: inset 0 0 0px #ff0000; outline: 0px solid #ff0000; }
-}
-.mail-warning {
-    color: #ff4444 !important;
-    background: rgba(217, 48, 37, 0.1) !important;
-    animation: tab-blink 1s infinite;
-}
-
-@keyframes tab-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-.screen-crash-active {
-    animation: screen-crash-anim 0.6s ease-out forwards !important;
-    position: relative; 
-    z-index: 9999; 
-    pointer-events: none; 
-}
-@keyframes screen-crash-anim {
-    0% {
-        box-shadow: inset 0 0 0px rgba(255, 0, 0, 0);
-        outline: 0px solid rgba(255, 0, 0, 0);
-    }
-    10% {
-        box-shadow: inset 0 0 150px rgba(255, 0, 0, 1);
-        outline: 10px solid #ff0000;
-        outline-offset: -10px; 
-    }
-    100% {
-        box-shadow: inset 0 0 0px rgba(255, 0, 0, 0);
-        outline: 0px solid rgba(255, 0, 0, 0);
-    }
-}
+.border-flash-red { animation: border-pulse-red 1s ease-out; }
+@keyframes border-pulse-red { 0% { box-shadow: inset 0 0 0px #ff0000; outline: 0px solid #ff0000; } 50% { box-shadow: inset 0 0 40px #ff0000; outline: 4px solid #ff0000; } 100% { box-shadow: inset 0 0 0px #ff0000; outline: 0px solid #ff0000; } }
+.mail-warning { color: #ff4444 !important; background: rgba(217, 48, 37, 0.1) !important; animation: tab-blink 1s infinite; }
+@keyframes tab-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.screen-crash-active { animation: screen-crash-anim 0.6s ease-out forwards !important; position: relative; z-index: 9999; pointer-events: none; }
+@keyframes screen-crash-anim { 0% { box-shadow: inset 0 0 0px rgba(255, 0, 0, 0); outline: 0px solid rgba(255, 0, 0, 0); } 10% { box-shadow: inset 0 0 150px rgba(255, 0, 0, 1); outline: 10px solid #ff0000; outline-offset: -10px; } 100% { box-shadow: inset 0 0 0px rgba(255, 0, 0, 0); outline: 0px solid rgba(255, 0, 0, 0); } }

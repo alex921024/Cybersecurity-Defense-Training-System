@@ -3,7 +3,6 @@ class ThreatRadar {
         this.container = null;
         this.isAnimating = false;
         
-        // 詳細的攻擊教學資料庫
         this.attackData = {
             'syn': {
                 name: 'SYN Flood 攻擊',
@@ -117,9 +116,8 @@ class ThreatRadar {
         `;
         document.body.appendChild(this.container);
 
-        // 如果目前不在控制台，先隱藏
         const activeTab = document.querySelector('.tab-content.active');
-        if (activeTab && activeTab.id !== 'tab-terminal') {
+        if (activeTab && activeTab.id !== 'tab-terminal' && activeTab.id !== 'tab-firewall') {
             this.container.style.display = 'none';
         }
         
@@ -209,19 +207,16 @@ class ThreatRadar {
 
     animateDetailedRadarGraphics(threatType, color, stepIndex) {
         const svgNS = "http://www.w3.org/2000/svg";
-        
-        // 座標定義 (對應 SVG 中心點)
         const POS_HACKER = { x: 90, y: 170 };
         const POS_TARGET = { x: 360, y: 170 };
         const POS_DNS = { x: 225, y: 60 };
 
         const dnsNode = document.getElementById('dns-node');
-        if (threatType === 'dns') dnsNode.setAttribute('opacity', '1');
-        else dnsNode.setAttribute('opacity', '0.15');
+        if (dnsNode) {
+            if (threatType === 'dns') dnsNode.setAttribute('opacity', '1');
+            else dnsNode.setAttribute('opacity', '0.15');
+        }
 
-        // ==========================================
-        // 發射封包功能 (支援 X/Y 雙軸移動)
-        // ==========================================
         const shootPacket = (from, to, iconCode, labelText, pktColor, size = 20, delayMs = 0, offsetY = 0) => {
             setTimeout(() => {
                 const packetGroup = document.createElementNS(svgNS, "g");
@@ -249,7 +244,8 @@ class ThreatRadar {
                 pLabel.setAttribute("x", startX); pLabel.setAttribute("y", startY - (size / 2 + 6));
 
                 packetGroup.appendChild(pIcon); packetGroup.appendChild(pLabel);
-                document.getElementById('radar-packets').appendChild(packetGroup);
+                const containerNode = document.getElementById('radar-packets');
+                if (containerNode) containerNode.appendChild(packetGroup);
 
                 const duration = "3.5s"; 
                 const animateX = document.createElementNS(svgNS, "animate");
@@ -276,9 +272,6 @@ class ThreatRadar {
             }, delayMs);
         };
 
-        // ==========================================
-        // 原地警告/狀態圖示功能
-        // ==========================================
         const pulseNode = (pos, iconCode, labelText, pulseColor, offsetY=0) => {
             const packetGroup = document.createElementNS(svgNS, "g");
             packetGroup.setAttribute("class", "radar-tutorial-packet-group pulse-icon");
@@ -301,7 +294,8 @@ class ThreatRadar {
             pLabel.textContent = labelText;
 
             packetGroup.appendChild(pIcon); packetGroup.appendChild(pLabel);
-            document.getElementById('radar-packets').appendChild(packetGroup);
+            const containerNode = document.getElementById('radar-packets');
+            if (containerNode) containerNode.appendChild(packetGroup);
 
             setTimeout(() => packetGroup.remove(), 3800);
         };
@@ -309,31 +303,24 @@ class ThreatRadar {
         const updateSlots = (colorsArray) => {
             const slots = ['slot-1', 'slot-2', 'slot-3', 'slot-4'];
             slots.forEach((id, index) => {
-                if (colorsArray[index]) document.getElementById(id).setAttribute('fill', colorsArray[index]);
+                const sEl = document.getElementById(id);
+                if (sEl && colorsArray[index]) sEl.setAttribute('fill', colorsArray[index]);
             });
         };
 
-        // ==========================================
-        // 🚀 動畫劇本 (完全比照截圖演繹)
-        // ==========================================
-
         if (threatType === 'syn') {
             if (stepIndex === 0) {
-                // 駭客連發 SYN
                 shootPacket(POS_HACKER, POS_TARGET, '&#xf0e0;', 'SYN', color, 18, 0, -15);
                 shootPacket(POS_HACKER, POS_TARGET, '&#xf0e0;', 'SYN', color, 18, 400, 0);
                 shootPacket(POS_HACKER, POS_TARGET, '&#xf0e0;', 'SYN', color, 18, 800, 15);
             } else if (stepIndex === 1) {
-                // 伺服器回覆 SYN-ACK 且槽位變黃
                 updateSlots(['#ffcc00', '#ffcc00', '#21262d', '#21262d']);
                 shootPacket(POS_TARGET, POS_HACKER, '&#xf0e0;', 'SYN-ACK', '#ffcc00', 18, 0, -10);
                 shootPacket(POS_TARGET, POS_HACKER, '&#xf0e0;', 'SYN-ACK', '#ffcc00', 18, 500, 10);
             } else if (stepIndex === 2) {
-                // 駭客不理會
                 pulseNode(POS_HACKER, '&#xf017;', '忽略 (超時)', '#8b949e', -30);
                 updateSlots(['#ffcc00', '#ffcc00', '#ffcc00', '#21262d']);
             } else if (stepIndex === 3) {
-                // 槽位全紅
                 updateSlots(['#ff4444', '#ff4444', '#ff4444', '#ff4444']);
                 pulseNode(POS_TARGET, '&#xf071;', '資源耗盡!', '#ff4444', -40);
             }
@@ -342,11 +329,9 @@ class ThreatRadar {
             if (stepIndex === 0) {
                 pulseNode(POS_HACKER, '&#xf21b;', '偽造 目標IP', '#00ebff', -30);
             } else if (stepIndex === 1) {
-                // 駭客射向頂部 DNS
                 shootPacket(POS_HACKER, POS_DNS, '&#xf0e0;', 'DNS Query', color, 18, 0, 0);
                 shootPacket(POS_HACKER, POS_DNS, '&#xf0e0;', 'DNS Query', color, 18, 400, 10);
             } else if (stepIndex === 2) {
-                // DNS 頂部反射巨大的封包砸向伺服器
                 shootPacket(POS_DNS, POS_TARGET, '&#xf0e0;', 'Huge Response', '#00ebff', 45, 0, 0);
                 shootPacket(POS_DNS, POS_TARGET, '&#xf0e0;', 'Huge Response', '#00ebff', 45, 600, 15);
             } else if (stepIndex === 3) {
@@ -377,11 +362,20 @@ class ThreatRadar {
 
     resetRadar() {
         this.isAnimating = false;
-        document.getElementById('attack-type-title').textContent = `系統安全 - 監控中...`;
-        document.getElementById('target-label').setAttribute('fill', '#00ebff');
-        document.getElementById('attack-steps-container').innerHTML = '';
-        document.getElementById('radar-packets').innerHTML = '';
-        document.getElementById('dns-node').setAttribute('opacity', '0.15');
+        const titleEl = document.getElementById('attack-type-title');
+        if (titleEl) titleEl.textContent = `系統安全 - 監控中...`;
+        
+        const labelEl = document.getElementById('target-label');
+        if (labelEl) labelEl.setAttribute('fill', '#00ebff');
+        
+        const stepsEl = document.getElementById('attack-steps-container');
+        if (stepsEl) stepsEl.innerHTML = '';
+        
+        const packetsEl = document.getElementById('radar-packets');
+        if (packetsEl) packetsEl.innerHTML = '';
+        
+        const dnsEl = document.getElementById('dns-node');
+        if (dnsEl) dnsEl.setAttribute('opacity', '0.15');
         
         ['slot-1', 'slot-2', 'slot-3', 'slot-4'].forEach(id => {
             const slot = document.getElementById(id);
