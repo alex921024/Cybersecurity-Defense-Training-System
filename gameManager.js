@@ -140,9 +140,9 @@ class GameManager {
 
         setTimeout(() => {
             let outputMsg = "";
-            if (cleanTarget === this.activeThreat || cleanTarget === 'ip') {
+            if (cleanTarget === this.activeThreat || cleanTarget === 'ip' || GameDB.maliciousIPs.includes(cleanTarget)) {
                 this.analyzedTargets.add(cleanTarget);
-                if (cleanTarget === 'syn') this.analyzedTargets.add('ip'); 
+                if (cleanTarget === 'syn' || GameDB.maliciousIPs.includes(cleanTarget)) this.analyzedTargets.add('ip'); 
                 
                 outputMsg = `[分析結果 - 高危險] <br>目標: ${cleanTarget.toUpperCase()}<br>狀態: 偵測到惡意 Payload。<br>建議行動: 立即進行阻斷 (Block)。`;
                 this.updateIdsAlert(`[情報解鎖] 已確認 ${cleanTarget.toUpperCase()} 為惡意來源，授權進行攔截。`);
@@ -177,7 +177,7 @@ class GameManager {
             return `[錯誤：違反 SOP] 請先分析具體的攻擊協定或來源 IP 後再進行封鎖。`;
         }
 
-        if (cleanArg === this.activeThreat || cleanArg === 'ip') {
+        if (cleanArg === this.activeThreat || cleanArg === 'ip' || GameDB.maliciousIPs.includes(cleanArg)) {
             if (this.activeThreat && this.activeThreat !== 'fishing' && this.activeThreat !== 'dns') {
                 this.stats[this.activeThreat]++;
             }
@@ -185,7 +185,7 @@ class GameManager {
             const ruleId = "RULE-" + Math.floor(Math.random() * 9000 + 1000);
             this.activeRules.unshift({
                 id: ruleId,
-                target: cleanArg === 'ip' ? '103.24.55.12' : cleanArg.toUpperCase(),
+                target: (cleanArg === 'ip' || cleanArg === this.activeThreat) ? '103.24.55.12' : cleanArg.toUpperCase(),
                 action: "DROP",
                 time: new Date().toLocaleTimeString()
             });
