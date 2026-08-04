@@ -28,8 +28,7 @@
         <aside id="game-sidebar">
             <div class="sidebar-header">防禦中心</div>
             <nav class="tab-menu">
-                <button class="tab-btn active" onclick="switchTab(event, 'tab-terminal')">🖥️ 控制台</button>
-                <button class="tab-btn" onclick="switchTab(event, 'tab-firewall')">🛡️ 防火牆中心</button>
+                <button class="tab-btn active" onclick="switchTab(event, 'tab-firewall')">🛡️ 監控與控制台</button>
                 <button class="tab-btn" onclick="switchTab(event, 'tab-status')">📈 系統狀態</button>
                 <button class="tab-btn" onclick="switchTab(event, 'tab-mailbox')">📧 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">0</span></button>
                 <button class="tab-btn" onclick="switchTab(event, 'tab-manual')">📘 指令手冊</button>
@@ -38,44 +37,51 @@
         </aside>
 
         <main id="tab-content-container">
-            <div id="tab-terminal" class="tab-content active">
-                <section id="terminal-section" style="height: 100%;">
-                    <h3>指令控制台 (root@sec-server:~#)</h3>
-                    <div id="terminal-output"></div>
-                    <div class="input-line">
-                        <span>></span>
-                        <input type="text" id="cmd-input" placeholder="輸入指令..." autocomplete="off">
-                    </div>
-                    <div class="quick-commands">
-                        <span class="cmd-tag" onclick="quickCmd('status')">status</span>
-                        <span class="cmd-tag" onclick="quickCmd('netstat')">netstat</span>
-                        <span class="cmd-tag" onclick="quickCmd('whois udp')">whois udp</span>
-                        <span class="cmd-tag" onclick="quickCmd('block ip')">block ip</span>
-                        <span class="cmd-tag" onclick="quickCmd('passwd')">passwd</span>
-                    </div>
-                </section>
-            </div>
-            
-            <div id="tab-firewall" class="tab-content">
-                <h2 class="tab-title">🛡️ 防火牆與入侵偵測中心 (Firewall & IDS)</h2>
+            <div id="tab-firewall" class="tab-content active">
+                <h2 class="tab-title" style="margin: 0 0 10px 0; font-size: 1.2em;">🛡️ SOC 即時防禦儀表板 (Monitoring & Terminal)</h2>
                 <div class="firewall-layout">
                     <div class="firewall-left">
                         <section id="analysis-section">
-                            <div class="analysis-header">
-                                <h3>即時流量監控 (Wireshark)</h3>
-                                <select id="protocol-filter">
-                                    <option value="ALL">全部 (ALL)</option>
-                                    <option value="TCP">TCP</option>
-                                    <option value="UDP">UDP</option>
-                                    <option value="ICMP">ICMP</option>
-                                    <option value="DNS">DNS</option>
-                                </select>
+                            <div class="analysis-header" style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="margin:0;">即時流量監控 (Wireshark)</h3>
+                                <div>
+                                    <button id="btn-pause-packet" class="cmd-tag" style="background:#ff9900; color:#000; font-weight:bold; padding:6px 12px; margin-right: 10px;" onclick="togglePacketCapture()">⏸️ 暫停擷取</button>
+                                    <select id="protocol-filter">
+                                        <option value="ALL">全部 (ALL)</option>
+                                        <option value="TCP">TCP</option>
+                                        <option value="UDP">UDP</option>
+                                        <option value="ICMP">ICMP</option>
+                                        <option value="DNS">DNS</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="scroll-box">
+                            
+                            <div class="scroll-box" style="flex: 2; border-bottom: 2px solid #444;">
                                 <table id="packet-table">
-                                    <thead><tr><th>時間</th><th>來源 IP</th><th>來源 Port</th><th>目標 IP</th><th>目標 Port</th><th>協定</th><th>長度</th><th>資訊</th></tr></thead>
+                                    <thead><tr><th>時間</th><th>來源 IP</th><th>來源 Port</th><th>目標 IP</th><th>目標 Port</th><th>協定</th><th>長度</th><th>狀態</th></tr></thead>
                                     <tbody id="packet-list"></tbody>
                                 </table>
+                            </div>
+
+                            <div id="packet-details-panel" style="flex: 1.2; background: #000; padding: 10px; font-family: monospace; font-size: 13px; color: #aaa; overflow-y: auto;">
+                                <h4 style="margin: 0 0 5px 0; color: #fff;">封包 Payload 檢視區 (點擊上方列表查看)</h4>
+                                <div id="packet-payload-content" style="white-space: pre-wrap; margin: 0; color: #55ff55;">等待選擇封包...</div>
+                            </div>
+                        </section>
+                        
+                        <section id="terminal-section">
+                            <h3 style="margin-top: 0; margin-bottom: 8px; border-bottom: 1px solid #333; padding-bottom: 5px;">指令控制台 (root@sec-server:~#)</h3>
+                            <div id="terminal-output"></div>
+                            <div class="input-line">
+                                <span>></span>
+                                <input type="text" id="cmd-input" placeholder="輸入防禦指令..." autocomplete="off">
+                            </div>
+                            <div class="quick-commands">
+                                <span class="cmd-tag" onclick="quickCmd('status')">status</span>
+                                <span class="cmd-tag" onclick="quickCmd('netstat')">netstat</span>
+                                <span class="cmd-tag" onclick="quickCmd('whois udp')">whois udp</span>
+                                <span class="cmd-tag" onclick="quickCmd('limit udp')">limit udp</span>
+                                <span class="cmd-tag" onclick="quickCmd('block ip')">block ip</span>
                             </div>
                         </section>
                     </div>
@@ -89,12 +95,19 @@
                         <div class="firewall-card analysis-card">
                             <h3><i class="fas fa-search"></i> 威脅情報分析儀 (SOP 認證)</h3>
                             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                                <input type="text" id="analyzer-input" placeholder="輸入可疑 IP 或 協定 (如 udp, dns)..." 
+                                <input type="text" id="analyzer-input" placeholder="輸入可疑 IP 或 協定 (如 udp)..." 
                                        style="flex: 1; background: #111; border: 1px solid #333; color: #00FF00; padding: 8px; font-family: monospace;">
                                 <button class="manual-btn" style="margin: 0; padding: 8px 15px; background: #1a73e8; color: #fff;" onclick="analyzeGUI()">分析 (Whois)</button>
                             </div>
                             <div id="analyzer-result" class="log-box" style="height: 60px; color: #00ebff;">
                                 等待輸入分析目標...
+                            </div>
+                        </div>
+
+                        <div class="firewall-card intel-card">
+                            <h3><i class="fas fa-bug"></i> 已偵測惡意 IP (Threat Intel)</h3>
+                            <div id="threat-intel-list" class="log-box" style="height: 80px; display: flex; flex-wrap: wrap; align-content: flex-start;">
+                                <span style="color:#666;">尚未發現已知威脅 IP...</span>
                             </div>
                         </div>
 
@@ -171,7 +184,9 @@
                             <tr><td><code>status</code></td><td>查看系統詳細負載狀態與密碼破解進度。</td></tr>
                             <tr><td><code>netstat</code></td><td>顯示當前網路連線，若有 DDoS 或異常流量會跳出警告。</td></tr>
                             <tr><td><code style="color: #00ebff;">whois [IP/協定]</code></td><td>(重要) 分析可疑目標，取得授權。範例：<code>whois udp</code></td></tr>
-                            <tr><td><code>block [IP/協定]</code></td><td>設定防火牆。需先完成分析才可封鎖。</td></tr>
+                            <tr><td><code>limit [協定]</code></td><td>暫時限速緩解攻擊傷害，爭取時間尋找來源。</td></tr>
+                            <tr><td><code>block [IP/協定]</code></td><td>設定防火牆。需先完成分析才可封鎖。注意副作用。</td></tr>
+                            <tr><td><code>unblock [IP/協定]</code></td><td>解除封鎖設定，恢復正常服務運作。</td></tr>
                             <tr><td><code>flush-dns</code></td><td>清除 DNS 快取。遭受污染時使用。</td></tr>
                             <tr><td><code>scan-mail</code></td><td>自動掃描並隔離惡意釣魚信件。</td></tr>
                             <tr><td><code>passwd</code></td><td>強制重置系統密碼，將破解進度歸零。</td></tr>
@@ -216,7 +231,7 @@
             }
             const radarPanel = document.getElementById('threat-radar-panel');
             if (radarPanel) {
-                radarPanel.style.display = (tabId === 'tab-terminal' || tabId === 'tab-firewall') ? 'flex' : 'none';
+                radarPanel.style.display = (tabId === 'tab-firewall') ? 'flex' : 'none';
             }
         };
 
@@ -247,7 +262,7 @@
 
         window.confirmStart = () => {
             document.getElementById('tutorial-modal').classList.add('hidden');
-            window.switchTab(null, 'tab-terminal');
+            window.switchTab(null, 'tab-firewall');
             window.gameManagerInstance.init(window.selectedDifficulty);
         };
 
@@ -269,6 +284,16 @@
         window.quitGame = () => { if(confirm("確定放棄？")) location.reload(); };
         window.viewMail = (id) => window.gameManagerInstance.viewMail(id);
         window.handleMail = (id, action) => window.gameManagerInstance.handleMail(id, action);
+        
+        // 點擊 IP 自動帶入指令並聚焦
+        window.quickAnalyze = (ip) => {
+            const input = document.getElementById('cmd-input');
+            input.value = `whois ${ip}`; 
+            input.focus();
+            if(window.gameManagerInstance) {
+                window.gameManagerInstance.showNotification(`已選定目標 ${ip}，請按 Enter 執行分析。`, 'success');
+            }
+        };
     </script>
 </body>
 </html>

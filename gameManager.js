@@ -19,6 +19,13 @@ class GameManager {
         this.activeRules = []; 
         this.analyzedTargets = new Set(); 
 
+        this.isPacketPaused = false;
+        this.activeSideEffects = [];
+        this.activeLimits = [];
+        
+        // 【新增】：情報庫狀態管理
+        this.discoveredIPs = new Map();
+
         if (typeof ThreatRadar !== 'undefined') {
             this.radar = new ThreatRadar();
         } else {
@@ -37,6 +44,8 @@ class GameManager {
 
         const filterEl = document.getElementById('protocol-filter');
         if (filterEl) filterEl.addEventListener('change', () => this.renderPackets());
+        
+        window.togglePacketCapture = () => this.togglePacketCapture();
         window.gameManager = this;
     }
 
@@ -55,8 +64,13 @@ class GameManager {
         this.packetHistory = []; 
         this.activeRules = [];
         this.stats = { syn: 0, udp: 0, dns: 0, icmp: 0, fishing: 0 };
+        this.activeSideEffects = [];
+        this.activeLimits = [];
+        this.isPacketPaused = false;
         
         this.analyzedTargets.clear();
+        this.discoveredIPs.clear();
+        
         const resEl = document.getElementById('analyzer-result');
         if (resEl) resEl.innerHTML = "等待輸入分析目標...";
 
@@ -66,6 +80,7 @@ class GameManager {
         this.receiveEmail(false);
         this.initCharts();
         this.renderRulesGUI();
+        this.renderThreatIntel();
         
         const logEl = document.getElementById('ids-alert-log');
         if (logEl) logEl.innerHTML = "系統防禦已初始化，處於全面監控狀態...";
@@ -81,18 +96,49 @@ class GameManager {
         const allTabs = document.querySelectorAll('.tab-btn');
         const mailBtn = Array.from(allTabs).find(btn => btn.innerText.includes('收件匣'));
 
+        // 1. 處理當前攻擊的扣血邏輯
         if (this.activeThreat) {
             if (this.status.timer % 8 === 0) {
-                this.status.applyDamage(this.activeThreat === 'fishing' ? 'Fishing' : 'Network');
-                if (this.activeThreat === 'fishing') this.triggerErrorFlash();
-                else this.logTerminal(`[系統警告] 未處理的網路威脅 (${this.activeThreat.toUpperCase()})！伺服器負載飆升！`, "alert");
+                if (this.activeLimits.includes(this.activeThreat)) {
+                    this.status.wifi = Math.min(100, this.status.wifi + 2); 
+                    this.logTerminal(`[系統提示] 攻擊 (${this.activeThreat.toUpperCase()}) 已被限速緩解，請盡快找出來源 IP！`, "success");
+                } else {
+                    this.status.applyDamage(this.activeThreat === 'fishing' ? 'Fishing' : 'Network');
+                    if (this.activeThreat === 'fishing') this.triggerErrorFlash();
+                    else this.logTerminal(`[系統警告] 未處理的網路威脅 (${this.activeThreat.toUpperCase()})！伺服器負載飆升！`, "alert");
+                }
             }
             if (mailBtn) mailBtn.classList.toggle('mail-warning', this.activeThreat === 'fishing');
         } else {
             if (mailBtn) mailBtn.classList.remove('mail-warning');
         }
 
-        if (!this.activeThreat && this.status.timer % 12 === 0) this.generateEvent();
+        // 2. 處理未解除防禦 (副作用) 的扣血與提示
+        if (this.activeSideEffects.length > 0) {
+            if (this.status.timer % 5 === 0) {
+                this.status.wifi = Math.min(100, this.status.wifi + 10);
+                this.status.cpu = Math.min(100, this.status.cpu + 5);
+                this.logTerminal(`[副作用警告] 全域封鎖 ${this.activeSideEffects.join(', ')} 導致業務受阻！請找出惡意 IP 封鎖後，使用 unblock 恢復正常。`, "alert");
+            }
+        }
+        
+        if (this.activeLimits.length > 0) {
+            if (this.status.timer % 10 === 0) {
+                this.status.wifi = Math.min(100, this.status.wifi + 3); 
+                this.logTerminal(`[效能警告] 流量管制 (限速) 影響正常業務。處理完畢後請記得 unblock 解除限速！`, "warning");
+            }
+        }
+
+        // ==========================================
+        // 【核心機制】：嚴格互斥鎖
+        // 只有在系統完全和平狀態下，才允許觸發新攻擊
+        // ==========================================
+        const isSystemClear = !this.activeThreat && this.activeSideEffects.length === 0 && this.activeLimits.length === 0;
+
+        if (isSystemClear && this.status.timer % 12 === 0) {
+            this.generateEvent();
+        }
+
         if (this.status.timer % 25 === 0 && Math.random() > 0.5) this.receiveEmail(false);
 
         this.generatePacketUI();
@@ -105,6 +151,8 @@ class GameManager {
     }
     
     generateEvent() {
+        if (this.activeThreat) return;
+
         const dice = Math.floor(Math.random() * 100) + 1;
         const r = this.difficultyConfig.ranges;
         let newThreat = null;
@@ -124,7 +172,7 @@ class GameManager {
                 this.logTerminal(`[IDS 警報] 攔截到可疑郵件，請至「收件匣」或使用 scan-mail 處理！`, "alert");
                 this.updateIdsAlert(`[威脅警報] 偵測到社交工程攻擊：惡意釣魚郵件已派發！`);
             } else {
-                this.logTerminal(`[IDS 警報] 偵測到異常活動: ${newThreat.toUpperCase()} 攻擊！請用 whois 分析後阻擋。`, "alert");
+                this.logTerminal(`[IDS 警報] 偵測到異常活動: ${newThreat.toUpperCase()} 攻擊！可先使用 limit 緩解，並暫停擷取封包以分析來源。`, "alert");
                 this.updateIdsAlert(`[流量突增] 偵測到異常 ${newThreat.toUpperCase()} 流量，請進行分析。`);
             }
             this.syncPolicyButtons();
@@ -143,6 +191,13 @@ class GameManager {
             if (cleanTarget === this.activeThreat || cleanTarget === 'ip' || GameDB.maliciousIPs.includes(cleanTarget)) {
                 this.analyzedTargets.add(cleanTarget);
                 if (cleanTarget === 'syn' || GameDB.maliciousIPs.includes(cleanTarget)) this.analyzedTargets.add('ip'); 
+                
+                // 【新增】：如果查詢的是具體 IP，將其加入情報庫
+                const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+                if (ipRegex.test(cleanTarget) && !this.discoveredIPs.has(cleanTarget)) {
+                    this.discoveredIPs.set(cleanTarget, 'active');
+                    this.renderThreatIntel(); 
+                }
                 
                 outputMsg = `[分析結果 - 高危險] <br>目標: ${cleanTarget.toUpperCase()}<br>狀態: 偵測到惡意 Payload。<br>建議行動: 立即進行阻斷 (Block)。`;
                 this.updateIdsAlert(`[情報解鎖] 已確認 ${cleanTarget.toUpperCase()} 為惡意來源，授權進行攔截。`);
@@ -164,46 +219,92 @@ class GameManager {
         return "情報分析指令已發送...";
     }
 
+    applyLimitAction(arg) {
+        const cleanArg = arg.toLowerCase().trim();
+        if (['udp', 'tcp', 'icmp', 'dns'].includes(cleanArg)) {
+            if (!this.activeLimits.includes(cleanArg)) {
+                this.activeLimits.push(cleanArg);
+            }
+            this.updateIdsAlert(`[流量管制] 已對 ${cleanArg.toUpperCase()} 實施全域限速 (Rate Limiting)。`);
+            return `[執行成功] 已限制 ${cleanArg.toUpperCase()} 頻寬。攻擊傷害暫時減弱，整體網路效能微幅下降。請把握時間找出惡意 IP！`;
+        }
+        return `[提示] 只能對特定協定進行限速 (如 tcp, udp, icmp, dns)。`;
+    }
+
     applyBlockAction(arg) {
         const cleanArg = arg.toLowerCase().trim();
         
-        if (!this.analyzedTargets.has(cleanArg) && cleanArg !== 'ip') {
+        if (GameDB.vipIPs && GameDB.vipIPs.includes(cleanArg)) {
+            this.status.crackProgress = Math.min(100, this.status.crackProgress + 25);
             this.triggerErrorFlash();
-            this.updateIdsAlert(`[操作駁回] 嘗試盲目封鎖未經確認的目標 ${cleanArg.toUpperCase()}`);
-            return `[錯誤：違反 SOP] 請先使用分析儀或 whois 指令查明來源，取得授權後再封鎖！`;
-        }
-        if (cleanArg === 'ip' && (!this.analyzedTargets.has(this.activeThreat) && !this.analyzedTargets.has('ip'))) {
-            this.triggerErrorFlash();
-            return `[錯誤：違反 SOP] 請先分析具體的攻擊協定或來源 IP 後再進行封鎖。`;
+            this.updateIdsAlert(`[重大客訴] 警告！您誤封鎖了 VIP 或重要營運節點 (${cleanArg})！`);
+            return `[錯誤：違反 SOP] 您封鎖了正常業務節點，導致營運癱瘓，信任崩潰！`;
         }
 
-        if (cleanArg === this.activeThreat || cleanArg === 'ip' || GameDB.maliciousIPs.includes(cleanArg)) {
-            if (this.activeThreat && this.activeThreat !== 'fishing' && this.activeThreat !== 'dns') {
-                this.stats[this.activeThreat]++;
+        if (['udp', 'tcp', 'icmp'].includes(cleanArg)) {
+            if (!this.activeSideEffects.includes(cleanArg)) {
+                this.activeSideEffects.push(cleanArg);
+            }
+            if (this.activeThreat === cleanArg) {
+                this.activeThreat = null;
+                this.status.reduceLoad(10);
             }
             
             const ruleId = "RULE-" + Math.floor(Math.random() * 9000 + 1000);
-            this.activeRules.unshift({
-                id: ruleId,
-                target: (cleanArg === 'ip' || cleanArg === this.activeThreat) ? '103.24.55.12' : cleanArg.toUpperCase(),
-                action: "DROP",
-                time: new Date().toLocaleTimeString()
-            });
+            this.activeRules.unshift({ id: ruleId, target: cleanArg.toUpperCase() + " (ALL)", action: "DROP", time: new Date().toLocaleTimeString() });
+            this.renderRulesGUI();
             
-            this.status.reduceLoad(20);
+            this.updateIdsAlert(`[全域封鎖] 阻斷所有 ${cleanArg.toUpperCase()} 流量。注意副作用！`);
+            return `[警告] 已粗暴阻斷 ${cleanArg.toUpperCase()}。攻擊暫緩，但業務受損！查出 IP 封鎖後請用 'unblock ${cleanArg}' 解除，以免系統持續耗損。`;
+        }
+
+        if (GameDB.maliciousIPs.includes(cleanArg) || this.analyzedTargets.has(cleanArg)) {
             this.activeThreat = null;
             this.analyzedTargets.clear();
+            this.status.reduceLoad(20);
             
-            this.updateIdsAlert(`[策略部署] 成功套用規則 ${ruleId}，攔截該來源。`);
+            // 【新增】：如果該 IP 在情報庫中，將其狀態改為已封鎖
+            if (this.discoveredIPs.has(cleanArg)) {
+                this.discoveredIPs.set(cleanArg, 'blocked');
+                this.renderThreatIntel();
+            }
+            
+            const ruleId = "RULE-" + Math.floor(Math.random() * 9000 + 1000);
+            this.activeRules.unshift({ id: ruleId, target: cleanArg, action: "DROP", time: new Date().toLocaleTimeString() });
             this.renderRulesGUI();
-            this.syncPolicyButtons();
+            
+            this.updateIdsAlert(`[精準打擊] 成功攔截惡意來源 ${cleanArg}。`);
             
             if (document.getElementById('analyzer-result')) {
                 document.getElementById('analyzer-result').innerHTML = "危機已解除，等待下一次分析...";
             }
-            return `[執行成功] 防火牆規則已更新：成功阻擋 ${cleanArg.toUpperCase()} 攻擊流量！`;
+            return `[執行成功] 防火牆規則已更新：精準阻擋威脅流量！若有限速或全域封鎖，請記得 unblock。`;
         }
-        return `[提示] 已設定封鎖規則，但未偵測到該類型威脅。`;
+
+        return `[提示] 找不到該目標或指令格式錯誤。`;
+    }
+
+    unblockAction(arg) {
+        const cleanArg = arg.toLowerCase().trim();
+        let msg = "";
+        
+        const blockIndex = this.activeSideEffects.indexOf(cleanArg);
+        if (blockIndex > -1) {
+            this.activeSideEffects.splice(blockIndex, 1);
+            msg += `[解除封鎖] 已恢復 ${cleanArg.toUpperCase()} 通行。 `;
+        }
+        
+        const limitIndex = this.activeLimits.indexOf(cleanArg);
+        if (limitIndex > -1) {
+            this.activeLimits.splice(limitIndex, 1);
+            msg += `[解除限速] 已恢復 ${cleanArg.toUpperCase()} 頻寬。`;
+        }
+        
+        if (msg) {
+            this.updateIdsAlert(msg);
+            return `[執行成功] ${msg}`;
+        }
+        return `[提示] 目前沒有針對 ${cleanArg} 執行全域封鎖或限速。`;
     }
 
     applyFlushDns() {
@@ -258,6 +359,30 @@ class GameManager {
         `).join('');
     }
 
+    // 【新增】：渲染情報面板
+    renderThreatIntel() {
+        const listEl = document.getElementById('threat-intel-list');
+        if (!listEl) return;
+        
+        if (this.discoveredIPs.size === 0) {
+            listEl.innerHTML = '<span style="color:#666;">尚未發現已知威脅 IP...</span>';
+            return;
+        }
+
+        listEl.innerHTML = '';
+        this.discoveredIPs.forEach((status, ip) => {
+            const span = document.createElement('span');
+            span.className = `intel-tag ${status === 'blocked' ? 'blocked' : ''}`;
+            span.innerHTML = status === 'blocked' ? `<i class="fas fa-shield-alt"></i> ${ip}` : `<i class="fas fa-crosshairs"></i> ${ip}`;
+            
+            if (status === 'active') {
+                span.onclick = () => window.quickCmd(`block ${ip}`);
+                span.title = "點擊立即封鎖此 IP";
+            }
+            listEl.appendChild(span);
+        });
+    }
+
     syncPolicyButtons() {
         ['udp', 'icmp', 'dns', 'ip'].forEach(t => {
             const btn = document.getElementById(`btn-mitigate-${t}`);
@@ -289,7 +414,9 @@ class GameManager {
             if(!mail.read) unread++;
             const div = document.createElement('div');
             let timeWarning = ""; 
-            const limit = 15; 
+            
+            const limit = 45; // 郵件處理時間 45 秒
+            
             const remaining = limit - (mail.spawnTime - this.status.timer);
             if (remaining >= 0) timeWarning = ` <span style="color: #FF0000;"> ${remaining}s</span>`;
             else {
@@ -300,6 +427,10 @@ class GameManager {
                         this.triggerErrorFlash();
                         this.status.applyDamage('Fishing');
                         this.logTerminal(`[重大警報] 釣魚郵件未處理，系統遭感染！`, "danger"); 
+                        
+                        if (this.activeThreat === 'fishing') {
+                            this.activeThreat = null;
+                        }
                     } else this.status.cpu += 5;
                 }
             }
@@ -354,30 +485,45 @@ class GameManager {
         }
     }
 
+    togglePacketCapture() {
+        this.isPacketPaused = !this.isPacketPaused;
+        const btn = document.getElementById('btn-pause-packet');
+        if (btn) {
+            btn.innerText = this.isPacketPaused ? "▶️ 繼續擷取" : "⏸️ 暫停擷取";
+            btn.style.background = this.isPacketPaused ? "#00ff00" : "#ff9900";
+        }
+        if (!this.isPacketPaused) this.renderPackets();
+    }
+
     generatePacketUI() {
         const isAttack = this.activeThreat && this.activeThreat !== 'fishing'; 
         const time = new Date().toLocaleTimeString('en-US', {hour12: false});
-        const srcIP = isAttack ? GameDB.maliciousIPs[Math.floor(Math.random() * GameDB.maliciousIPs.length)] : `192.168.1.${Math.floor(Math.random()*255)}`;
-        const normalProtos = ["TCP", "TCP", "TLSv1.2", "UDP", "HTTP", "DNS", "ICMP"];
+        
+        let allIPs = GameDB.maliciousIPs;
+        if (GameDB.vipIPs) allIPs = allIPs.concat(GameDB.vipIPs);
+        allIPs = allIPs.concat([`192.168.1.${Math.floor(Math.random()*255)}`]);
+        
+        const srcIP = isAttack ? GameDB.maliciousIPs[Math.floor(Math.random() * GameDB.maliciousIPs.length)] : allIPs[Math.floor(Math.random() * allIPs.length)];
+        
+        const normalProtos = ["TCP", "UDP", "HTTP", "DNS", "ICMP"];
         const proto = isAttack ? this.activeThreat.toUpperCase() : normalProtos[Math.floor(Math.random() * normalProtos.length)];
-        let srcPort = "-", destPort = "-";
+        
+        let srcPort = Math.floor(Math.random() * 55535 + 10000).toString();
+        let destPort = proto === 'HTTP' ? "80" : proto === 'DNS' ? "53" : "443";
+        if (proto === 'ICMP') { srcPort = "-"; destPort = "-"; }
 
-        if (proto !== 'ICMP') {
-            srcPort = Math.floor(Math.random() * 55535 + 10000).toString();
-            switch(proto) {
-                case 'HTTP': destPort = "80"; break;
-                case 'TLSv1.2': destPort = "443"; break;
-                case 'DNS': destPort = "53"; break;
-                case 'UDP': destPort = isAttack ? Math.floor(Math.random() * 65535).toString() : "53"; break;
-                case 'SYN': destPort = [80, 443][Math.floor(Math.random()*2)].toString(); break;
-                case 'TCP': destPort = [80, 443, 22, 3389, 8080][Math.floor(Math.random()*5)].toString(); break;
-                default: destPort = "80";
-            }
-        }
         const len = isAttack ? Math.floor(Math.random() * 1500 + 1000) : Math.floor(Math.random() * 200 + 40);
-        this.packetHistory.unshift({ time, srcIP, srcPort, destIP: '10.0.0.1', destPort, proto, len, isAttack });
-        if (this.packetHistory.length > 40) this.packetHistory.pop();
-        this.renderPackets();
+        
+        let payloadData = isAttack && GameDB.payloads.malicious[proto.toLowerCase()] ? GameDB.payloads.malicious[proto.toLowerCase()] : GameDB.payloads.normal[Math.floor(Math.random() * GameDB.payloads.normal.length)];
+        
+        this.packetHistory.unshift({ time, srcIP, srcPort, destIP: '10.0.0.1', destPort, proto, len, isAttack, payload: payloadData });
+        
+        // 【歷史擴充】：將儲存上限擴增至 200 筆
+        if (this.packetHistory.length > 200) this.packetHistory.pop();
+        
+        if (!this.isPacketPaused) {
+            this.renderPackets();
+        }
     }
 
     renderPackets() {
@@ -391,10 +537,35 @@ class GameManager {
         if (filter !== 'ALL') {
             filteredPackets = this.packetHistory.filter(p => p.proto === filter || (filter === 'TCP' && (p.proto === 'TLSv1.2' || p.proto === 'HTTP')));
         }
-        filteredPackets.slice(0, 14).forEach(p => {
+        
+        // 【顯示擴容】：提高渲染筆數至 150 筆
+        filteredPackets.slice(0, 150).forEach(p => {
             const tr = document.createElement('tr');
             tr.className = p.isAttack ? 'packet-danger' : `proto-${p.proto.toLowerCase().replace('.', '')}`;  
-            tr.innerHTML = `<td>${p.time}</td><td>${p.srcIP}</td><td>${p.srcPort}</td><td>${p.destIP}</td><td style="color:#00ffff;">${p.destPort}</td><td>${p.proto}</td><td>${p.len}</td><td>${p.isAttack ? 'Malicious' : 'Standard'}</td>`;
+            tr.innerHTML = `<td>${p.time}</td><td><strong>${p.srcIP}</strong></td><td>${p.srcPort}</td><td>${p.destIP}</td><td style="color:#0077aa; font-weight:bold;">${p.destPort}</td><td>${p.proto}</td><td>${p.len}</td><td>${p.isAttack ? 'Malicious' : 'Standard'}</td>`;
+            
+            tr.onclick = () => {
+                document.querySelectorAll('#packet-list tr').forEach(row => row.classList.remove('selected-packet'));
+                tr.classList.add('selected-packet');
+                
+                const payloadContent = document.getElementById('packet-payload-content');
+                if (payloadContent) {
+                    let hint = "";
+                    if (p.isAttack && p.len > 1000) hint = ' <span style="color:#ff4444; font-weight:bold;">⚠️ (長度異常)</span>';
+                    
+                    payloadContent.innerHTML = `
+<div style="margin-bottom: 10px;">
+    <span style="color:#aaa;">[來源 IP]</span> 
+    <span onclick="quickAnalyze('${p.srcIP}')" style="cursor:pointer; background:#ffcc00; padding:4px 8px; border-radius:4px; color:#000; font-weight:bold; font-size:14px; box-shadow: 0 0 8px rgba(255, 204, 0, 0.6); display:inline-block; margin-left: 5px;">
+        ${p.srcIP} 🖱️ (點擊帶入分析)
+    </span>${hint}
+</div>
+<div style="margin-bottom: 4px;"><span style="color:#aaa;">[目標埠口]</span> <span style="color:#fff;">${p.destPort}</span></div>
+<div style="margin-bottom: 12px;"><span style="color:#aaa;">[封包大小]</span> <span style="color:#fff;">${p.len} bytes</span></div>
+<div style="color:#aaa; border-bottom: 1px solid #444; padding-bottom: 4px; margin-bottom: 6px;">[Payload 內容擷取]</div>
+<div style="color: ${p.isAttack ? '#ff5555' : '#55ff55'}; word-wrap: break-word; font-size: 14px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #333;">${p.payload}</div>`;
+                }
+            };
             list.appendChild(tr);
         });
     }
@@ -410,7 +581,7 @@ class GameManager {
         const out = document.getElementById('terminal-output');
         if (!out) return;
         const prefix = type === "user" ? "root@sec-server:~# " : "";
-        const color = type === "alert" ? "color:#ffaa00; font-weight:bold;" : type === "success" ? "color:#00ff00; font-weight:bold;" : "color:#00FF00;";
+        const color = type === "alert" ? "color:#ffaa00; font-weight:bold;" : type === "success" ? "color:#00ff00; font-weight:bold;" : type === "danger" ? "color:#ff0000; font-weight:bold;" : type === "warning" ? "color:#ff9900;" : "color:#00FF00;";
         out.innerHTML += `<div style="${color} margin-bottom: 4px;">${prefix}${msg}</div>`;
         out.scrollTop = out.scrollHeight;
     }
@@ -420,7 +591,7 @@ class GameManager {
         const results = {
             "SUCCESS": { title: "🎉 任務成功", desc: "伺服器安全撐過指定時間，您完美守護了系統！", color: "#00FF00" },
             "FAILURE_RESOURCE": { title: "💥 任務失敗", desc: "防禦失敗：硬體負載達 100% 崩潰！", color: "#FF4444" },
-            "FAILURE_CRACKED": { title: "💀 任務失敗", desc: "防禦失敗：密碼已被字典檔破解！", color: "#FF4444" },
+            "FAILURE_CRACKED": { title: "💀 任務失敗", desc: "防禦失敗：密碼已被破解或客訴過多導致信任崩潰！", color: "#FF4444" },
             "FAILURE_OVERLOAD": { title: "⚠️ 任務失敗", desc: "防禦失敗：系統負載未能降至 75% 以下。", color: "#FFA500" }
         };
         setTimeout(() => {

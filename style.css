@@ -154,20 +154,43 @@ body, html {
 }
 
 /* =========================================
-   4. 分頁 - 控制台 (Terminal Tab)
+   4. 分頁 - SOC 儀表板 (Firewall & Terminal)
 ========================================= */
-#tab-terminal {
-    gap: 15px;
+.firewall-layout {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+    height: calc(100% - 40px);
+    min-height: 0;
+}
+
+/* 左側：Wireshark + Terminal */
+.firewall-left {
+    width: 55%; 
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 15px; 
+}
+
+#analysis-section {
+    flex: 1.2; 
+    background: #111;
+    border: 1px solid #444;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 #terminal-section {
-    flex: 1;
+    flex: 1; 
     background: #000;
     border: 1px solid #444;
     padding: 15px;
     display: flex;
     flex-direction: column;
-    min-height: 0;
+    min-height: 0; 
 }
 
 #terminal-output {
@@ -184,6 +207,7 @@ body, html {
     align-items: center;
     border-top: 1px solid #333;
     padding-top: 10px;
+    margin-top: 5px;
 }
 
 #cmd-input {
@@ -193,6 +217,7 @@ body, html {
     outline: none;
     width: 100%;
     font-family: inherit;
+    margin-left: 8px;
 }
 
 .quick-commands {
@@ -217,26 +242,9 @@ body, html {
     color: #000;
 }
 
-/* =========================================
-   5. 分頁 - 防火牆中心 (Firewall Tab)
-========================================= */
-.firewall-layout {
-    display: flex;
-    gap: 20px;
-    flex: 1;
-    height: calc(100% - 50px);
-    min-height: 0;
-}
-
-.firewall-left {
-    width: 52%;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
+/* 右側：防禦卡片區 */
 .firewall-right {
-    width: 48%;
+    width: 45%;
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -306,20 +314,6 @@ body, html {
     color: #fff !important;
     border-color: #ff4444 !important;
     animation: tab-blink 1s infinite;
-}
-
-/* Wireshark 表格區 (流量監控) */
-#tab-firewall #analysis-section {
-    height: 100% !important;
-}
-
-#analysis-section {
-    height: 100%;
-    background: #111;
-    border: 1px solid #444;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
 }
 
 .scroll-box {
@@ -777,4 +771,55 @@ body, html {
         box-shadow: inset 0 0 0px rgba(255, 0, 0, 0);
         outline: 0px solid rgba(255, 0, 0, 0);
     }
+}
+
+/* =========================================
+   14. Wireshark 表格點擊互動 
+========================================= */
+#packet-list tr {
+    cursor: pointer;
+    transition: filter 0.15s ease-in-out;
+}
+
+/* 滑鼠移過去時：取消黑色背景，改為稍微加深原本的底色 */
+#packet-list tr:hover {
+    filter: brightness(0.85); 
+}
+
+/* 點擊選中時：加入亮黃色外框，並確保不會擠壓到表格排版 */
+#packet-list tr.selected-packet {
+    outline: 2px solid #ffaa00;
+    outline-offset: -2px;
+    background-color: rgba(255, 170, 0, 0.15) !important; 
+}
+
+/* =========================================
+   15. 威脅情報庫標籤 (Threat Intel Tags)
+========================================= */
+.intel-tag {
+    display: inline-block;
+    background: rgba(217, 48, 37, 0.1);
+    color: #ff4444;
+    border: 1px solid #ff4444;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin: 4px 4px 0 0;
+    cursor: pointer;
+    font-size: 13px;
+    font-family: monospace;
+    font-weight: bold;
+    transition: all 0.2s;
+}
+
+.intel-tag:hover {
+    background: #ff4444;
+    color: #fff;
+}
+
+.intel-tag.blocked {
+    background: rgba(0, 255, 0, 0.1);
+    color: #00ff00;
+    border-color: #00ff00;
+    text-decoration: line-through;
+    pointer-events: none; 
 }

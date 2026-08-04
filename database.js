@@ -5,7 +5,24 @@ const GameDB = {
         2: { time: 480, ranges: { syn: [1, 10], udp: [11, 25], dns: [26, 40], icmp: [41, 55], fishing: [56, 75], none: [76, 100] } }
     },
     maliciousIPs: ["103.24.55.12", "45.22.19.8", "188.166.25.190", "8.8.8.8", "167.99.14.22"],
+    vipIPs: ["192.168.1.100", "10.0.0.5", "168.95.1.1"],
     security: { accountLen: 6, passwordLen: 10 },
+    
+    payloads: {
+        normal: [
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body>Welcome...</body></html>",
+            "TLSv1.2 Application Data (Encrypted)...",
+            "DNS Standard query 0x1a2b A www.google.com",
+            "ICMP Echo Request (id=0x1234, seq=1, ttl=64)...",
+            "TCP Window Update..."
+        ],
+        malicious: {
+            syn: "[SYN] Seq=0 Win=64240 Len=0 MSS=1460 (Possible SYN Flood)",
+            udp: "0x0000:  ff ff ff ff ff ff ff ff ... (Garbage Data / UDP Flood)",
+            icmp: "ICMP Echo Request (id=0x9999, seq=999, ttl=64) (Large Payload/Flood)",
+            dns: "DNS Standard query response 0xabcd ANY (Amplification Attack Payload, Size: 4096 bytes)"
+        }
+    },
     
     emails: {
         normal: [

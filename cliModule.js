@@ -9,7 +9,7 @@ class CLIModule {
 
         switch (cmd) {
             case 'help':
-                return `[系統指令參考]\n- status    : 查看系統狀態\n- ipconfig  : 查詢網路設定\n- ping [IP] : 測試連線\n- netstat   : 顯示當前異常連線\n- whois [arg]: ⚠️ 分析目標IP或協定\n- block [arg]: 封鎖(需先分析)\n- flush-dns : 淨化DNS(需先分析)\n- scan-mail : 掃描並隔離釣魚郵件\n- passwd    : 更改密碼防禦破解\n- clear     : 清空畫面`;
+                return `[系統指令參考]\n- status    : 查看系統狀態\n- ipconfig  : 查詢網路設定\n- ping [IP] : 測試連線\n- netstat   : 顯示當前異常連線\n- whois [arg]: ⚠️ 分析目標IP或協定\n- block [arg]: 封鎖(IP或協定)\n- limit [arg]: 暫時對某協定限速緩解攻擊\n- unblock [arg]: 解除封鎖或限速(恢復副作用)\n- flush-dns : 淨化DNS(需先分析)\n- scan-mail : 掃描並隔離釣魚郵件\n- passwd    : 更改密碼防禦破解\n- clear     : 清空畫面`;
             
             case 'status':
                 return `[狀態]\nCPU: ${Math.floor(this.gm.status.cpu)}% | GPU: ${Math.floor(this.gm.status.gpu)}%\nRAM: ${Math.floor(this.gm.status.ram)}% | WiFi: ${Math.floor(this.gm.status.wifi)}%\n破解進度: ${Math.floor(this.gm.status.crackProgress)}%`;
@@ -35,6 +35,14 @@ class CLIModule {
             case 'block':
                 if (!args[1]) return "錯誤。用法: block udp 或 block ip";
                 return this.gm.applyBlockAction(args[1]);
+
+            case 'limit':
+                if (!args[1]) return "錯誤。用法: limit [協定] (例如: limit udp)";
+                return this.gm.applyLimitAction(args[1]);
+
+            case 'unblock':
+                if (!args[1]) return "錯誤。用法: unblock [協定/IP]";
+                return this.gm.unblockAction(args[1]);
 
             case 'flush-dns':
                 return this.gm.applyFlushDns();
