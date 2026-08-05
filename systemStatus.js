@@ -7,13 +7,13 @@ class SystemStatus {
 
     applyDamage(type) {
         if (type === 'Fishing') {
-            const inc = Math.floor(Math.random() * 4) + 2; 
+            const inc = Math.floor(Math.random() * 3) + 1; // 大幅調降：原為 2~5，現為 1~3
             this.cpu = Math.min(100, this.cpu + inc);
             this.gpu = Math.min(100, this.gpu + inc);
             this.wifi = Math.min(100, this.wifi + inc);
             this.ram = Math.min(100, this.ram + inc);
         } else {
-            const inc = Math.floor(Math.random() * 6) + 5; 
+            const inc = Math.floor(Math.random() * 4) + 2; // 大幅調降：原為 5~10，現為 2~5
             this.gpu = Math.min(100, this.gpu + inc);
             this.wifi = Math.min(100, this.wifi + inc);
             this.ram = Math.min(100, this.ram + inc);

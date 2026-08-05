@@ -672,6 +672,33 @@ body, html {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
+#threat-radar-panel.collapsed {
+    min-height: auto !important;
+    height: auto !important;
+    width: 280px !important;     /* 縮小後的寬度 */
+    min-width: 280px !important;
+    resize: none !important;     /* 縮小時不允許拉伸 */
+}
+
+/* 縮小時隱藏雷達畫面與資訊區 */
+#threat-radar-panel.collapsed #radar-screen,
+#threat-radar-panel.collapsed .attack-info {
+    display: none !important;
+}
+
+/* 確保標題列在縮小時依然保持彈性排版 */
+.radar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 縮小按鈕的懸停效果 */
+#btn-collapse-radar:hover {
+    color: #fff;
+    transform: scale(1.1);
+}
+
 /* =========================================
    12. 系統通知提示 (Toast Notifications)
 ========================================= */

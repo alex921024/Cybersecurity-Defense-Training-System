@@ -23,8 +23,10 @@ class GameManager {
         this.activeSideEffects = [];
         this.activeLimits = [];
         
-        // 【新增】：情報庫狀態管理
+        // 情報庫現在會存放物件: { status: 'active' | 'blocked', type: 'SYN' | 'UDP' | 'MALICIOUS' }
         this.discoveredIPs = new Map();
+        
+        this.peaceCooldown = 0;
 
         if (typeof ThreatRadar !== 'undefined') {
             this.radar = new ThreatRadar();
@@ -47,6 +49,7 @@ class GameManager {
         
         window.togglePacketCapture = () => this.togglePacketCapture();
         window.gameManager = this;
+        window.gameManagerInstance = this; // 確保全域可呼叫一鍵封鎖
     }
 
     init(difficulty) {
@@ -67,6 +70,8 @@ class GameManager {
         this.activeSideEffects = [];
         this.activeLimits = [];
         this.isPacketPaused = false;
+        
+        this.peaceCooldown = 15;
         
         this.analyzedTargets.clear();
         this.discoveredIPs.clear();
@@ -91,12 +96,15 @@ class GameManager {
 
     gameLoop() {
         this.status.timer--;
-        this.status.crackProgress += (Math.random() * 0.2 + 0.05); 
+        this.status.crackProgress += (Math.random() * 0.1 + 0.02); 
+
+        if (this.peaceCooldown > 0) {
+            this.peaceCooldown--;
+        }
 
         const allTabs = document.querySelectorAll('.tab-btn');
         const mailBtn = Array.from(allTabs).find(btn => btn.innerText.includes('收件匣'));
 
-        // 1. 處理當前攻擊的扣血邏輯
         if (this.activeThreat) {
             if (this.status.timer % 8 === 0) {
                 if (this.activeLimits.includes(this.activeThreat)) {
@@ -113,29 +121,24 @@ class GameManager {
             if (mailBtn) mailBtn.classList.remove('mail-warning');
         }
 
-        // 2. 處理未解除防禦 (副作用) 的扣血與提示
         if (this.activeSideEffects.length > 0) {
-            if (this.status.timer % 5 === 0) {
-                this.status.wifi = Math.min(100, this.status.wifi + 10);
-                this.status.cpu = Math.min(100, this.status.cpu + 5);
+            if (this.status.timer % 8 === 0) {
+                this.status.wifi = Math.min(100, this.status.wifi + 5);
+                this.status.cpu = Math.min(100, this.status.cpu + 3);
                 this.logTerminal(`[副作用警告] 全域封鎖 ${this.activeSideEffects.join(', ')} 導致業務受阻！請找出惡意 IP 封鎖後，使用 unblock 恢復正常。`, "alert");
             }
         }
         
         if (this.activeLimits.length > 0) {
-            if (this.status.timer % 10 === 0) {
-                this.status.wifi = Math.min(100, this.status.wifi + 3); 
+            if (this.status.timer % 12 === 0) {
+                this.status.wifi = Math.min(100, this.status.wifi + 2); 
                 this.logTerminal(`[效能警告] 流量管制 (限速) 影響正常業務。處理完畢後請記得 unblock 解除限速！`, "warning");
             }
         }
 
-        // ==========================================
-        // 【核心機制】：嚴格互斥鎖
-        // 只有在系統完全和平狀態下，才允許觸發新攻擊
-        // ==========================================
-        const isSystemClear = !this.activeThreat && this.activeSideEffects.length === 0 && this.activeLimits.length === 0;
+        const isSystemClear = !this.activeThreat && this.activeSideEffects.length === 0 && this.activeLimits.length === 0 && this.peaceCooldown <= 0;
 
-        if (isSystemClear && this.status.timer % 12 === 0) {
+        if (isSystemClear && this.status.timer % 15 === 0) {
             this.generateEvent();
         }
 
@@ -192,10 +195,17 @@ class GameManager {
                 this.analyzedTargets.add(cleanTarget);
                 if (cleanTarget === 'syn' || GameDB.maliciousIPs.includes(cleanTarget)) this.analyzedTargets.add('ip'); 
                 
-                // 【新增】：如果查詢的是具體 IP，將其加入情報庫
                 const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
                 if (ipRegex.test(cleanTarget) && !this.discoveredIPs.has(cleanTarget)) {
-                    this.discoveredIPs.set(cleanTarget, 'active');
+                    // 自動判斷攻擊種類 (依據當前活躍的威脅)
+                    let detectedType = 'APT/Malware';
+                    if (this.activeThreat && this.activeThreat !== 'fishing' && this.activeThreat !== 'dns') {
+                        detectedType = this.activeThreat.toUpperCase();
+                    } else if (cleanTarget === 'dns') {
+                        detectedType = 'DNS';
+                    }
+                    // 將狀態與種類一起存入
+                    this.discoveredIPs.set(cleanTarget, { status: 'active', type: detectedType });
                     this.renderThreatIntel(); 
                 }
                 
@@ -217,6 +227,25 @@ class GameManager {
         }, 800);
 
         return "情報分析指令已發送...";
+    }
+
+    // 【新增】一鍵封鎖所有已知的危險 IP
+    blockAllActive() {
+        let blockedCount = 0;
+        this.discoveredIPs.forEach((info, ip) => {
+            if (info.status === 'active') {
+                // 自動送出指令
+                const res = this.applyBlockAction(ip);
+                this.logTerminal(`> block ${ip}`, "user");
+                this.logTerminal(res, "system");
+                blockedCount++;
+            }
+        });
+        if (blockedCount > 0) {
+            this.showNotification(`已一鍵封鎖 ${blockedCount} 個惡意來源！`, "success");
+        } else {
+            this.logTerminal(`[提示] 目前沒有需要封鎖的活躍惡意 IP。`, "warning");
+        }
     }
 
     applyLimitAction(arg) {
@@ -259,13 +288,18 @@ class GameManager {
         }
 
         if (GameDB.maliciousIPs.includes(cleanArg) || this.analyzedTargets.has(cleanArg)) {
+            
+            this.status.reduceLoad(30); 
             this.activeThreat = null;
             this.analyzedTargets.clear();
-            this.status.reduceLoad(20);
             
-            // 【新增】：如果該 IP 在情報庫中，將其狀態改為已封鎖
+            this.peaceCooldown = 10;
+            
+            // 更新情報庫中的狀態為 blocked
             if (this.discoveredIPs.has(cleanArg)) {
-                this.discoveredIPs.set(cleanArg, 'blocked');
+                let info = this.discoveredIPs.get(cleanArg);
+                info.status = 'blocked';
+                this.discoveredIPs.set(cleanArg, info);
                 this.renderThreatIntel();
             }
             
@@ -319,6 +353,8 @@ class GameManager {
             this.activeThreat = null;
             this.analyzedTargets.clear();
             
+            this.peaceCooldown = 10;
+            
             const ruleId = "RULE-" + Math.floor(Math.random() * 9000 + 1000);
             this.activeRules.unshift({ id: ruleId, target: "DNS CACHE", action: "FLUSH & RE-ROUTE", time: new Date().toLocaleTimeString() });
             
@@ -359,7 +395,7 @@ class GameManager {
         `).join('');
     }
 
-    // 【新增】：渲染情報面板
+    // 【大幅升級】情報面板渲染：分類群組與一鍵封鎖
     renderThreatIntel() {
         const listEl = document.getElementById('threat-intel-list');
         if (!listEl) return;
@@ -369,18 +405,45 @@ class GameManager {
             return;
         }
 
-        listEl.innerHTML = '';
-        this.discoveredIPs.forEach((status, ip) => {
-            const span = document.createElement('span');
-            span.className = `intel-tag ${status === 'blocked' ? 'blocked' : ''}`;
-            span.innerHTML = status === 'blocked' ? `<i class="fas fa-shield-alt"></i> ${ip}` : `<i class="fas fa-crosshairs"></i> ${ip}`;
-            
-            if (status === 'active') {
-                span.onclick = () => window.quickCmd(`block ${ip}`);
-                span.title = "點擊立即封鎖此 IP";
-            }
-            listEl.appendChild(span);
+        let html = '';
+        let hasActive = false;
+        
+        // 將 IP 依照攻擊種類 (type) 進行分組
+        const groups = {};
+        this.discoveredIPs.forEach((info, ip) => {
+            if (!groups[info.type]) groups[info.type] = [];
+            groups[info.type].push({ ip: ip, status: info.status });
+            if (info.status === 'active') hasActive = true;
         });
+
+        // 只要有活躍未封鎖的 IP，就顯示一鍵封鎖按鈕
+        if (hasActive) {
+            html += `<div style="margin-bottom: 12px;">
+                        <button onclick="window.gameManagerInstance.blockAllActive()" style="background: #d93025; color: #fff; border: 1px solid #ff4444; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; width: 100%; transition: 0.2s;">
+                            <i class="fas fa-ban"></i> ⚠️ 一鍵封鎖所有已分析危險 IP
+                        </button>
+                     </div>`;
+        }
+
+        // 依據攻擊種類渲染標籤群組
+        for (const [attackType, items] of Object.entries(groups)) {
+            html += `<div style="margin-bottom: 8px; width: 100%;">
+                        <strong style="color:#00ebff; font-size: 13px; display:block; margin-bottom: 4px; border-bottom: 1px dashed #333; padding-bottom: 2px;">
+                            <i class="fas fa-folder-open"></i> [${attackType}] 攻擊源
+                        </strong>`;
+            
+            items.forEach(item => {
+                const isBlocked = item.status === 'blocked';
+                const cls = isBlocked ? 'intel-tag blocked' : 'intel-tag';
+                const icon = isBlocked ? '<i class="fas fa-shield-alt"></i>' : '<i class="fas fa-crosshairs"></i>';
+                const action = isBlocked ? '' : `onclick="window.quickCmd('block ${item.ip}')" title="點擊立即單獨封鎖此 IP"`;
+                
+                html += `<span class="${cls}" ${action}>${icon} ${item.ip}</span>`;
+            });
+            html += `</div>`;
+        }
+
+        listEl.innerHTML = html;
     }
 
     syncPolicyButtons() {
@@ -415,7 +478,7 @@ class GameManager {
             const div = document.createElement('div');
             let timeWarning = ""; 
             
-            const limit = 45; // 郵件處理時間 45 秒
+            const limit = 45; 
             
             const remaining = limit - (mail.spawnTime - this.status.timer);
             if (remaining >= 0) timeWarning = ` <span style="color: #FF0000;"> ${remaining}s</span>`;
@@ -430,6 +493,7 @@ class GameManager {
                         
                         if (this.activeThreat === 'fishing') {
                             this.activeThreat = null;
+                            this.peaceCooldown = 10; 
                         }
                     } else this.status.cpu += 5;
                 }
@@ -465,7 +529,11 @@ class GameManager {
 
         if (action === 'delete') {
             if (mail.isMalicious && this.activeThreat === 'fishing') {
-                this.stats.fishing++; this.activeThreat = null; this.status.reduceLoad(15);
+                this.stats.fishing++; 
+                this.activeThreat = null; 
+                this.status.reduceLoad(20);
+                this.peaceCooldown = 10; 
+                
                 this.logTerminal(`[系統通知] 成功刪除惡意釣魚郵件。`, "success");
                 this.showNotification("成功識別並銷毀釣魚威脅。","success");
             }
@@ -474,8 +542,11 @@ class GameManager {
             this.renderMailList();
         } else if (action === 'click') {
             if (mail.isMalicious) {
-                this.triggerErrorFlash(); this.activeThreat = null; 
-                this.status.applyDamage('Fishing'); this.status.applyDamage('Fishing'); 
+                this.triggerErrorFlash(); 
+                this.activeThreat = null; 
+                this.peaceCooldown = 10; 
+                this.status.applyDamage('Fishing'); 
+                this.status.applyDamage('Fishing'); 
                 this.logTerminal(`[重大警報] 誤點惡意連結，系統遭感染！`, "danger");
                 this.showNotification("警告：誤觸釣魚連結！資源大幅消耗。");
             }
@@ -518,7 +589,6 @@ class GameManager {
         
         this.packetHistory.unshift({ time, srcIP, srcPort, destIP: '10.0.0.1', destPort, proto, len, isAttack, payload: payloadData });
         
-        // 【歷史擴充】：將儲存上限擴增至 200 筆
         if (this.packetHistory.length > 200) this.packetHistory.pop();
         
         if (!this.isPacketPaused) {
@@ -538,7 +608,6 @@ class GameManager {
             filteredPackets = this.packetHistory.filter(p => p.proto === filter || (filter === 'TCP' && (p.proto === 'TLSv1.2' || p.proto === 'HTTP')));
         }
         
-        // 【顯示擴容】：提高渲染筆數至 150 筆
         filteredPackets.slice(0, 150).forEach(p => {
             const tr = document.createElement('tr');
             tr.className = p.isAttack ? 'packet-danger' : `proto-${p.proto.toLowerCase().replace('.', '')}`;  
@@ -552,18 +621,17 @@ class GameManager {
                 if (payloadContent) {
                     let hint = "";
                     if (p.isAttack && p.len > 1000) hint = ' <span style="color:#ff4444; font-weight:bold;">⚠️ (長度異常)</span>';
-                    
                     payloadContent.innerHTML = `
-<div style="margin-bottom: 10px;">
+<div style="margin-bottom: 10px; display: flex; align-items: center;">
     <span style="color:#aaa;">[來源 IP]</span> 
-    <span onclick="quickAnalyze('${p.srcIP}')" style="cursor:pointer; background:#ffcc00; padding:4px 8px; border-radius:4px; color:#000; font-weight:bold; font-size:14px; box-shadow: 0 0 8px rgba(255, 204, 0, 0.6); display:inline-block; margin-left: 5px;">
-        ${p.srcIP} 🖱️ (點擊帶入分析)
+    <span onclick="quickAnalyze('${p.srcIP}')" style="cursor:pointer; background:#ffcc00; padding:2px 8px; border-radius:3px; color:#000; font-weight:bold; font-size:12px; box-shadow: 0 0 5px rgba(255, 204, 0, 0.6); display:inline-block; width: fit-content; margin-left: 8px;">
+        ${p.srcIP} 🖱️ 分析
     </span>${hint}
 </div>
 <div style="margin-bottom: 4px;"><span style="color:#aaa;">[目標埠口]</span> <span style="color:#fff;">${p.destPort}</span></div>
 <div style="margin-bottom: 12px;"><span style="color:#aaa;">[封包大小]</span> <span style="color:#fff;">${p.len} bytes</span></div>
 <div style="color:#aaa; border-bottom: 1px solid #444; padding-bottom: 4px; margin-bottom: 6px;">[Payload 內容擷取]</div>
-<div style="color: ${p.isAttack ? '#ff5555' : '#55ff55'}; word-wrap: break-word; font-size: 14px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #333;">${p.payload}</div>`;
+<div style="color: ${p.isAttack ? '#ff5555' : '#55ff55'}; word-wrap: break-word; font-size: 13px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #333;">${p.payload}</div>`;
                 }
             };
             list.appendChild(tr);

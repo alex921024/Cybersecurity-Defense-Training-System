@@ -1,8 +1,9 @@
 const GameDB = {
     difficulties: {
-        0: { time: 240,  ranges: { syn: [1, 15], udp: [16, 30], dns: null, icmp: null, fishing: [31, 45], none: [46, 100] } },
-        1: { time: 240, ranges: { syn: [1, 10], udp: [11, 20], dns: [21, 30], icmp: null, fishing: [31, 60], none: [61, 100] } },
-        2: { time: 480, ranges: { syn: [1, 10], udp: [11, 25], dns: [26, 40], icmp: [41, 55], fishing: [56, 75], none: [76, 100] } }
+        // 大幅調降的難度設定 (增加 none 無事發生的機率)
+        0: { time: 240,  ranges: { syn: [1, 10], udp: [11, 20], dns: null, icmp: null, fishing: [21, 30], none: [31, 100] } },
+        1: { time: 240, ranges: { syn: [1, 10], udp: [11, 20], dns: [21, 25], icmp: null, fishing: [26, 40], none: [41, 100] } },
+        2: { time: 480, ranges: { syn: [1, 10], udp: [11, 20], dns: [21, 30], icmp: [31, 40], fishing: [41, 55], none: [56, 100] } }
     },
     maliciousIPs: ["103.24.55.12", "45.22.19.8", "188.166.25.190", "8.8.8.8", "167.99.14.22"],
     vipIPs: ["192.168.1.100", "10.0.0.5", "168.95.1.1"],

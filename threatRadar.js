@@ -58,9 +58,12 @@ class ThreatRadar {
 
         this.container = document.createElement('div');
         this.container.id = 'threat-radar-panel';
+        
+        // 修改標題列，加入縮小按鈕
         this.container.innerHTML = `
             <div class="radar-header" id="radar-drag-handle" title="按住拖曳視窗">
-                <i class="fas fa-crosshairs"></i> 即時威脅雷達 (教學模式)
+                <div><i class="fas fa-crosshairs"></i> 即時威脅雷達</div>
+                <i class="fas fa-window-minimize" id="btn-collapse-radar" title="縮小/展開面板" style="cursor: pointer; transition: 0.2s;"></i>
             </div>
             
             <div id="radar-screen" style="background-color: #0d1117; position: relative;">
@@ -122,6 +125,27 @@ class ThreatRadar {
         }
         
         this._setupDraggable();
+        this._setupCollapse(); // 初始化縮小按鈕事件
+    }
+
+    _setupCollapse() {
+        const collapseBtn = document.getElementById('btn-collapse-radar');
+        if (collapseBtn) {
+            // 防止點擊縮小按鈕時觸發拖曳
+            collapseBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+            
+            collapseBtn.addEventListener('click', () => {
+                this.container.classList.toggle('collapsed');
+                // 切換按鈕圖示
+                if (this.container.classList.contains('collapsed')) {
+                    collapseBtn.classList.remove('fa-window-minimize');
+                    collapseBtn.classList.add('fa-window-restore');
+                } else {
+                    collapseBtn.classList.remove('fa-window-restore');
+                    collapseBtn.classList.add('fa-window-minimize');
+                }
+            });
+        }
     }
 
     _setupDraggable() {
@@ -164,6 +188,12 @@ class ThreatRadar {
     trigger(threatType) {
         if (!this.attackData[threatType] || this.isAnimating) return;
         this.isAnimating = true;
+        
+        // 如果正在發生攻擊，且面板是被縮小的，可以選擇自動展開以警告玩家
+        if (this.container.classList.contains('collapsed')) {
+            document.getElementById('btn-collapse-radar').click();
+        }
+        
         const data = this.attackData[threatType];
         
         const titleEl = document.getElementById('attack-type-title');
