@@ -27,6 +27,7 @@ class GameManager {
         this.discoveredIPs = new Map();
         
         this.peaceCooldown = 0;
+        this.attackCooldown = 0;
 
         if (typeof ThreatRadar !== 'undefined') {
             this.radar = new ThreatRadar();
@@ -72,6 +73,7 @@ class GameManager {
         this.isPacketPaused = false;
         
         this.peaceCooldown = 15;
+        this.attackCooldown = 12;
         
         this.analyzedTargets.clear();
         this.discoveredIPs.clear();
@@ -119,6 +121,9 @@ class GameManager {
         if (this.peaceCooldown > 0) {
             this.peaceCooldown--;
         }
+        if (this.attackCooldown > 0) {
+            this.attackCooldown--;
+        }
 
         const allTabs = document.querySelectorAll('.tab-btn');
         const mailBtn = Array.from(allTabs).find(btn => btn.innerText.includes('收件匣'));
@@ -163,7 +168,7 @@ class GameManager {
 
         const isSystemClear = !this.activeThreat && this.activeSideEffects.length === 0 && this.activeLimits.length === 0 && this.peaceCooldown <= 0;
 
-        if (isSystemClear && this.status.timer % 15 === 0) {
+        if (isSystemClear && this.attackCooldown <= 0 && this.status.timer % 20 === 0) {
             this.generateEvent();
         }
 
@@ -191,22 +196,24 @@ class GameManager {
         else if (r.icmp && dice >= r.icmp[0] && dice <= r.icmp[1]) newThreat = "icmp";
         else if (r.fishing && dice >= r.fishing[0] && dice <= r.fishing[1]) newThreat = "fishing";
 
-        if (newThreat) {
-            this.activeThreat = newThreat;
-            if (this.radar && ['syn', 'udp', 'dns', 'icmp'].includes(newThreat)) this.radar.trigger(newThreat);
-
-            if (newThreat === 'fishing') {
-                this.receiveEmail(true); 
-                this.logTerminal(`[IDS 警報] 攔截到可疑郵件，請至「收件匣」或使用 scan-mail 處理！`, "alert");
-                this.updateIdsAlert(`[威脅警報] 偵測到社交工程攻擊：惡意釣魚郵件已派發！`);
-                this.updateMissionPanel('郵件警報', '收到釣魚郵件，請先掃描或刪除可疑郵件。', '不要點擊信中連結，先使用 scan-mail 或刪除信件。', 2);
-            } else {
-                this.logTerminal(`[IDS 警報] 偵測到異常活動: ${newThreat.toUpperCase()} 攻擊！可先使用 limit 緩解，並暫停擷取封包以分析來源。`, "alert");
-                this.updateIdsAlert(`[流量突增] 偵測到異常 ${newThreat.toUpperCase()} 流量，請進行分析。`);
-                this.updateMissionPanel('攻擊偵測', `偵測到 ${newThreat.toUpperCase()} 攻擊，請使用 whois 分析來源。`, '先分析再封鎖，避免誤封正常服務。', 2);
-            }
-            this.syncPolicyButtons();
+        if (!newThreat) {
+            this.attackCooldown = 10;
+            return;
         }
+        this.activeThreat = newThreat;
+        if (this.radar && ['syn', 'udp', 'dns', 'icmp'].includes(newThreat)) this.radar.trigger(newThreat);
+
+        if (newThreat === 'fishing') {
+            this.receiveEmail(true); 
+            this.logTerminal(`[IDS 警報] 攔截到可疑郵件，請至「收件匣」或使用 scan-mail 處理！`, "alert");
+            this.updateIdsAlert(`[威脅警報] 偵測到社交工程攻擊：惡意釣魚郵件已派發！`);
+            this.updateMissionPanel('郵件警報', '收到釣魚郵件，請先掃描或刪除可疑郵件。', '不要點擊信中連結，先使用 scan-mail 或刪除信件。', 2);
+        } else {
+            this.logTerminal(`[IDS 警報] 偵測到異常活動: ${newThreat.toUpperCase()} 攻擊！可先使用 limit 緩解，並暫停擷取封包以分析來源。`, "alert");
+            this.updateIdsAlert(`[流量突增] 偵測到異常 ${newThreat.toUpperCase()} 流量，請進行分析。`);
+            this.updateMissionPanel('攻擊偵測', `偵測到 ${newThreat.toUpperCase()} 攻擊，請使用 whois 分析來源。`, '先分析再封鎖，避免誤封正常服務。', 2);
+        }
+        this.syncPolicyButtons();
     }
 
     analyzeThreat(target) {
@@ -336,6 +343,7 @@ class GameManager {
             this.analyzedTargets.clear();
             
             this.peaceCooldown = 10;
+            this.attackCooldown = Math.max(this.attackCooldown, 12);
             
             // 更新情報庫中的狀態為 blocked
             if (this.discoveredIPs.has(cleanArg)) {
@@ -397,6 +405,7 @@ class GameManager {
             this.analyzedTargets.clear();
             
             this.peaceCooldown = 10;
+            this.attackCooldown = Math.max(this.attackCooldown, 12);
             
             const ruleId = "RULE-" + Math.floor(Math.random() * 9000 + 1000);
             this.activeRules.unshift({ id: ruleId, target: "DNS CACHE", action: "FLUSH & RE-ROUTE", time: new Date().toLocaleTimeString() });
@@ -437,6 +446,15 @@ class GameManager {
                 <td><span style="color:#00ff00;">ACTIVE</span></td>
             </tr>
         `).join('');
+    }
+
+    syncPolicyButtons() {
+        ['udp', 'icmp', 'dns', 'ip'].forEach(type => {
+            const btn = document.getElementById(`btn-mitigate-${type}`);
+            if (!btn) return;
+            const isActive = this.activeThreat === type || (type === 'ip' && this.activeThreat === 'syn');
+            btn.classList.toggle('active-policy', isActive);
+        });
     }
 
     // 【大幅升級】情報面板渲染：分類群組與一鍵封鎖
@@ -531,6 +549,7 @@ class GameManager {
             if (this.activeThreat === 'fishing') {
                 this.activeThreat = null;
                 this.peaceCooldown = 10;
+                this.attackCooldown = Math.max(this.attackCooldown, 12);
             }
             this.renderMailList();
             this.updateIdsAlert("[信件防禦] 已掃描並隔離釣魚郵件。系統安全提升。\n");
@@ -625,6 +644,7 @@ class GameManager {
                 this.triggerErrorFlash(); 
                 this.activeThreat = null; 
                 this.peaceCooldown = 10; 
+                this.attackCooldown = Math.max(this.attackCooldown, 12);
                 this.status.applyDamage('Fishing'); 
                 this.status.applyDamage('Fishing'); 
                 this.logTerminal(`[重大警報] 誤點惡意連結，系統遭感染！`, "danger");
