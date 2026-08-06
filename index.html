@@ -39,6 +39,24 @@
         <main id="tab-content-container">
             <div id="tab-firewall" class="tab-content active">
                 <h2 class="tab-title" style="margin: 0 0 10px 0; font-size: 1.2em;">🛡️ SOC 即時防禦儀表板 (Monitoring & Terminal)</h2>
+                <div id="mission-panel" class="mission-panel">
+                    <div class="mission-head">
+                        <div>
+                            <div class="mission-label">任務階段</div>
+                            <div id="mission-phase" class="mission-phase">待命中</div>
+                        </div>
+                        <div>
+                            <div class="mission-label">當前目標</div>
+                            <div id="mission-objective" class="mission-objective">啟動監控，等待異常流量或釣魚郵件。</div>
+                        </div>
+                    </div>
+                    <div class="mission-tip">提示：<span id="mission-tip">保持系統穩定，使用 status 與 netstat 了解當前狀態。</span></div>
+                    <div class="mission-steps">
+                        <span id="mission-step-1" class="mission-step active-step">1. 偵測異常流量</span>
+                        <span id="mission-step-2" class="mission-step">2. 分析可疑來源</span>
+                        <span id="mission-step-3" class="mission-step">3. 精準封鎖並恢復</span>
+                    </div>
+                </div>
                 <div class="firewall-layout">
                     <div class="firewall-left">
                         <section id="analysis-section">
@@ -82,6 +100,8 @@
                                 <span class="cmd-tag" onclick="quickCmd('whois udp')">whois udp</span>
                                 <span class="cmd-tag" onclick="quickCmd('limit udp')">limit udp</span>
                                 <span class="cmd-tag" onclick="quickCmd('block ip')">block ip</span>
+                                <span class="cmd-tag" onclick="quickCmd('scan-mail')">scan-mail</span>
+                                <span class="cmd-tag" onclick="quickCmd('flush-dns')">flush-dns</span>
                             </div>
                         </section>
                     </div>

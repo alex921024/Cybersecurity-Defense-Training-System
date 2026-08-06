@@ -12,7 +12,10 @@ class CLIModule {
                 return `[系統指令參考]\n- status    : 查看系統狀態\n- ipconfig  : 查詢網路設定\n- ping [IP] : 測試連線\n- netstat   : 顯示當前異常連線\n- whois [arg]: ⚠️ 分析目標IP或協定\n- block [arg]: 封鎖(IP或協定)\n- limit [arg]: 暫時對某協定限速緩解攻擊\n- unblock [arg]: 解除封鎖或限速(恢復副作用)\n- flush-dns : 淨化DNS(需先分析)\n- scan-mail : 掃描並隔離釣魚郵件\n- passwd    : 更改密碼防禦破解\n- clear     : 清空畫面`;
             
             case 'status':
-                return `[狀態]\nCPU: ${Math.floor(this.gm.status.cpu)}% | GPU: ${Math.floor(this.gm.status.gpu)}%\nRAM: ${Math.floor(this.gm.status.ram)}% | WiFi: ${Math.floor(this.gm.status.wifi)}%\n破解進度: ${Math.floor(this.gm.status.crackProgress)}%`;
+                const totalMail = this.gm.inbox.length;
+                const phishingCount = this.gm.inbox.filter(mail => mail.isMalicious).length;
+                const mailInfo = totalMail > 0 ? `\n郵件: ${totalMail} 封 (${phishingCount} 封可疑)` : "";
+                return `[狀態]\nCPU: ${Math.floor(this.gm.status.cpu)}% | GPU: ${Math.floor(this.gm.status.gpu)}%\nRAM: ${Math.floor(this.gm.status.ram)}% | WiFi: ${Math.floor(this.gm.status.wifi)}%\n破解進度: ${Math.floor(this.gm.status.crackProgress)}%${mailInfo}`;
 
             case 'ipconfig':
                 return `IPv4 位址 . . . : 10.0.0.1\n子網路遮罩 . . . : 255.255.255.0\n預設閘道 . . . . : 10.0.0.254`;
@@ -24,6 +27,12 @@ class CLIModule {
             case 'netstat':
                 if (this.gm.activeThreat === "syn" || this.gm.activeThreat === "udp" || this.gm.activeThreat === "icmp") {
                     return `[警告] 發現大量異常連線 (協定: ${this.gm.activeThreat.toUpperCase()}) 來自 103.24.55.12\n建議立即使用 'whois' 進行分析。`;
+                }
+                if (this.gm.activeThreat === "dns") {
+                    return `[警告] 網路連線顯示 DNS 流量異常，疑似放大攻擊。請使用 'whois dns' 或 'flush-dns' 檢查。`;
+                }
+                if (this.gm.activeThreat === "fishing") {
+                    return `[警告] 網路連線正常，但 IDS 監測到社交工程攻擊。請檢查收件匣或使用 'scan-mail'。`;
                 }
                 return "網路連線正常，無異常。";
 
@@ -48,12 +57,7 @@ class CLIModule {
                 return this.gm.applyFlushDns();
 
             case 'scan-mail':
-                if (this.gm.activeThreat === "fishing") {
-                    this.gm.stats.fishing++; this.gm.status.reduceLoad(15); this.gm.activeThreat = null;
-                    this.gm.updateIdsAlert("[信件防禦] 成功隔離惡意威脅郵件。");
-                    return "[執行成功] 發現並已隔離 1 封釣魚郵件！";
-                }
-                return "未發現可疑釣魚郵件。";
+                return this.gm.scanMailInbox();
 
             case 'passwd': 
                 this.gm.status.crackProgress = 0;

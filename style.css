@@ -74,23 +74,24 @@ body, html {
 ========================================= */
 #game-screen {
     display: flex;
+    min-height: 100vh;
 }
 
 #game-sidebar {
-    width: 220px;
-    background: var(--sidebar-color);
-    border-right: 1px solid var(--border-color);
+    width: 240px;
+    background: #121a24;
+    border-right: 1px solid #1d2834;
     display: flex;
     flex-direction: column;
 }
 
 .sidebar-header {
-    padding: 20px;
-    font-size: 1.2em;
+    padding: 22px;
+    font-size: 1.25em;
     font-weight: bold;
     text-align: center;
-    border-bottom: 1px solid var(--border-color);
-    color: #fff;
+    border-bottom: 1px solid #1d2834;
+    color: #ebf5ff;
 }
 
 .tab-menu {
@@ -137,7 +138,7 @@ body, html {
     flex: 1;
     position: relative;
     overflow: hidden;
-    background: #000;
+    background: #020609;
 }
 
 .tab-content {
@@ -148,6 +149,63 @@ body, html {
     box-sizing: border-box;
     flex-direction: column;
 }
+
+.mission-panel {
+    margin-bottom: 16px;
+    padding: 14px 18px;
+    border: 1px solid #25314a;
+    background: #08111b;
+    border-radius: 8px;
+    color: #d4e4f5;
+}
+
+.mission-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.mission-label {
+    font-size: 0.82em;
+    color: #7aaaff;
+    margin-bottom: 6px;
+}
+
+.mission-phase,
+.mission-objective {
+    font-size: 1em;
+    line-height: 1.4;
+}
+
+.mission-tip {
+    margin-top: 12px;
+    font-size: 0.9em;
+    color: #a7b8d6;
+}
+
+.mission-steps {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.mission-step {
+    padding: 8px 14px;
+    border: 1px solid #20354f;
+    background: #0b1522;
+    color: #acc9f7;
+    border-radius: 999px;
+    font-size: 0.85em;
+}
+
+.active-step {
+    border-color: #64d7ff;
+    background: #132239;
+    color: #e8f8ff;
+}
+
 
 .tab-content.active {
     display: flex;
@@ -175,8 +233,8 @@ body, html {
 
 #analysis-section {
     flex: 1.2; 
-    background: #111;
-    border: 1px solid #444;
+    background: #111820;
+    border: 1px solid #1f2c3a;
     padding: 10px;
     display: flex;
     flex-direction: column;
@@ -185,8 +243,8 @@ body, html {
 
 #terminal-section {
     flex: 1; 
-    background: #000;
-    border: 1px solid #444;
+    background: #0d1520;
+    border: 1px solid #1f2c3a;
     padding: 15px;
     display: flex;
     flex-direction: column;
@@ -253,35 +311,36 @@ body, html {
 }
 
 .firewall-card {
-    background: #0d0d0d;
-    border: 1px solid #252525;
-    border-radius: 6px;
-    padding: 15px;
+    background: #0f1a28;
+    border: 1px solid #1d2a38;
+    border-radius: 8px;
+    padding: 18px;
     display: flex;
     flex-direction: column;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.15);
 }
 
 .firewall-card h3 {
-    margin: 0 0 10px 0;
-    color: #ffffff;
+    margin: 0 0 12px 0;
+    color: #eef7ff;
     font-size: 1.05em;
-    border-bottom: 1px solid #222;
-    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    padding-bottom: 8px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
 }
 
 .log-box {
-    background: #030303;
-    border: 1px solid #1a1a1a;
-    padding: 10px;
-    font-size: 0.85em;
+    background: #09101b;
+    border: 1px solid #1d2a38;
+    padding: 12px;
+    font-size: 0.9em;
     font-family: monospace;
-    height: 75px;
+    height: 86px;
     overflow-y: auto;
     white-space: pre-wrap;
-    color: #ffaa00;
+    color: #ffd16c;
 }
 
 .policy-grid {
@@ -319,8 +378,8 @@ body, html {
 .scroll-box {
     flex: 1;
     overflow-y: auto;
-    border: 1px solid #333;
-    background: #ffffff;
+    border: 1px solid #1d2c3a;
+    background: #08101b;
 }
 
 #packet-table {
@@ -332,39 +391,62 @@ body, html {
 }
 
 #packet-table th {
-    background: #f0f0f0;
-    color: #333;
+    background: #122035;
+    color: #d8e8ff;
     position: sticky;
     top: 0;
     padding: 4px 8px;
-    border: 1px solid #ccc;
+    border: 1px solid #1e2f46;
     font-weight: normal;
     text-align: left;
 }
 
 #packet-table td {
     padding: 2px 8px;
-    border-right: 1px solid #eee;
+    border-right: 1px solid #1d2c3a;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    color: #222;
+    color: #ffffff;
+}
+
+#packet-table tr {
+    background-color: rgba(255, 255, 255, 0.03);
 }
 
 /* 封包顏色標籤 */
-.proto-tcp { background-color: #e7f4ff !important; }
-.proto-udp { background-color: #ffffd5 !important; }
-.proto-icmp { background-color: #facdff !important; }
-.proto-http { background-color: #e7ffdf !important; }
-.proto-dns { background-color: #e2e2ff !important; }
+.proto-tcp { background-color: rgba(31, 148, 255, 0.18) !important; }
+.proto-udp { background-color: rgba(255, 191, 0, 0.18) !important; }
+.proto-icmp { background-color: rgba(171, 84, 255, 0.18) !important; }
+.proto-http { background-color: rgba(0, 205, 142, 0.18) !important; }
+.proto-dns { background-color: rgba(107, 125, 255, 0.18) !important; }
 
 .packet-danger {
-    background-color: rgba(217, 48, 37, 0.2) !important;
+    background-color: rgba(217, 48, 37, 0.25) !important;
 }
 
 .packet-danger td {
-    color: #d93025 !important;
+    color: #ffffff !important;
     font-weight: bold;
+}
+
+#packet-table tr:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.warn-ip {
+    color: #ff6f6f !important;
+    font-weight: bold;
+}
+
+#packet-table td:first-child,
+#packet-table td:nth-child(2),
+#packet-table td:nth-child(4),
+#packet-table td:nth-child(5),
+#packet-table td:nth-child(6),
+#packet-table td:nth-child(7),
+#packet-table td:nth-child(8) {
+    color: #f5f7ff;
 }
 
 /* =========================================
@@ -440,45 +522,74 @@ body, html {
 .mail-layout {
     display: flex;
     height: calc(100% - 60px);
-    background: #fff;
+    background: #0c1623;
     border-radius: 8px;
     overflow: hidden;
 }
 
 .mail-list {
     width: 35%;
-    border-right: 1px solid #ddd;
+    border-right: 1px solid #1e2c3f;
     overflow-y: auto;
-    background: #fff;
-    color: #333;
+    background: #111a26;
+    color: #d8e8ff;
 }
 
 .mail-item {
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid #1e2c3f;
     padding: 12px 15px;
     position: relative;
     transition: background 0.2s;
 }
 
 .mail-item.unread {
-    background: #f2f6fc;
-    border-left: 4px solid #1a73e8;
+    background: #142137;
+    border-left: 4px solid #64d7ff;
     font-weight: bold;
+}
+
+.mail-item.read {
+    background: #0f1722;
+    border-left: 4px solid transparent;
+    color: #b8c7de;
+}
+
+.mail-item:hover {
+    background: #1c2a3a;
+}
+
+.mail-badge {
+    font-size: 0.82em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+}
+
+.mail-badge.phishing {
+    background: rgba(217, 48, 37, 0.12);
+    color: #ff6660;
+    border: 1px solid rgba(217, 48, 37, 0.3);
+}
+
+.mail-badge.normal {
+    background: rgba(0, 176, 255, 0.1);
+    color: #7cc8ff;
+    border: 1px solid rgba(0, 176, 255, 0.25);
 }
 
 .mail-viewer {
     width: 65%;
     padding: 30px;
-    background: #fff;
-    color: #333;
+    background: #0d1725;
+    color: #d8e8ff;
     overflow-y: auto;
 }
 
 .mail-header h3 {
-    color: #202124;
+    color: #f2f7ff;
     margin: 0;
     padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #1e2c3f;
 }
 
 .mail-actions {
@@ -511,27 +622,27 @@ body, html {
 .manual-table {
     width: 100%;
     border-collapse: collapse;
-    background: #0a0a0a;
+    background: #101a27;
 }
 
 .manual-table th {
-    background: #1a1a1a;
+    background: #142438;
     color: var(--terminal-green);
     padding: 12px;
-    border: 1px solid #333;
+    border: 1px solid #1f2c3f;
 }
 
 .manual-table td {
     padding: 12px;
-    border: 1px solid #333;
-    color: #ccc;
+    border: 1px solid #1f2c3f;
+    color: #d8e8ff;
 }
 
 .manual-table code {
-    background: #000;
+    background: #121f30;
     color: var(--warning-orange);
     padding: 3px 6px;
-    border: 1px solid #444;
+    border: 1px solid #2c3f55;
 }
 
 /* =========================================
@@ -581,6 +692,12 @@ body, html {
     cursor: pointer;
     font-weight: bold;
     margin: 10px;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.manual-btn:hover, .btn-cancel:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.08);
 }
 
 /* =========================================
@@ -849,4 +966,20 @@ body, html {
     border-color: #00ff00;
     text-decoration: line-through;
     pointer-events: none; 
+}
+
+.intel-group {
+    margin-bottom: 12px;
+    padding: 12px;
+    border: 1px solid rgba(100, 215, 255, 0.16);
+    border-radius: 12px;
+    background: rgba(8, 18, 30, 0.92);
+}
+
+.intel-group-title {
+    color: #64d7ff;
+    margin-bottom: 10px;
+    font-weight: 700;
+    display: block;
+    font-size: 0.95em;
 }

@@ -79,6 +79,8 @@ class GameManager {
         const resEl = document.getElementById('analyzer-result');
         if (resEl) resEl.innerHTML = "等待輸入分析目標...";
 
+        this.updateMissionPanel('待命中', '啟動監控，等待異常流量或釣魚郵件。', '保持系統穩定，使用 status 與 netstat 了解當前狀態。', 1);
+
         this.logTerminal("System boot successful. Initializing security protocols...", "system");
         this.logTerminal(`開始執行難度等級: ${difficulty}。請隨時注意系統負載與破解進度。`, "alert");
         
@@ -94,6 +96,22 @@ class GameManager {
         this.interval = setInterval(() => this.gameLoop(), 1000);
     }
 
+    updateMissionPanel(phase, objective, tip, stepIndex) {
+        const phaseEl = document.getElementById('mission-phase');
+        const objEl = document.getElementById('mission-objective');
+        const tipEl = document.getElementById('mission-tip');
+        if (phaseEl) phaseEl.innerText = phase;
+        if (objEl) objEl.innerText = objective;
+        if (tipEl) tipEl.innerText = tip;
+
+        for (let idx = 1; idx <= 3; idx++) {
+            const stepEl = document.getElementById(`mission-step-${idx}`);
+            if (!stepEl) continue;
+            if (idx === stepIndex) stepEl.classList.add('active-step');
+            else stepEl.classList.remove('active-step');
+        }
+    }
+
     gameLoop() {
         this.status.timer--;
         this.status.crackProgress += (Math.random() * 0.1 + 0.02); 
@@ -106,6 +124,8 @@ class GameManager {
         const mailBtn = Array.from(allTabs).find(btn => btn.innerText.includes('收件匣'));
 
         if (this.activeThreat) {
+            this.updateMissionPanel('攻擊偵測', `偵測到 ${this.activeThreat.toUpperCase()} 威脅。請先分析或限速，再進行封鎖。`, '使用 whois 或 netstat 取得更多資訊，必要時 deploy block/limit。', 2);
+
             if (this.status.timer % 8 === 0) {
                 if (this.activeLimits.includes(this.activeThreat)) {
                     this.status.wifi = Math.min(100, this.status.wifi + 2); 
@@ -118,6 +138,11 @@ class GameManager {
             }
             if (mailBtn) mailBtn.classList.toggle('mail-warning', this.activeThreat === 'fishing');
         } else {
+            if (this.peaceCooldown > 0) {
+                this.updateMissionPanel('維持防禦', '已緩解當前威脅，待命下一波攻擊。', '留意系統資源與新進郵件，避免錯過釣魚信件。', 3);
+            } else {
+                this.updateMissionPanel('待命中', '啟動監控，等待異常流量或釣魚郵件。', '保持系統穩定，使用 status 與 netstat 了解當前狀態。', 1);
+            }
             if (mailBtn) mailBtn.classList.remove('mail-warning');
         }
 
@@ -174,9 +199,11 @@ class GameManager {
                 this.receiveEmail(true); 
                 this.logTerminal(`[IDS 警報] 攔截到可疑郵件，請至「收件匣」或使用 scan-mail 處理！`, "alert");
                 this.updateIdsAlert(`[威脅警報] 偵測到社交工程攻擊：惡意釣魚郵件已派發！`);
+                this.updateMissionPanel('郵件警報', '收到釣魚郵件，請先掃描或刪除可疑郵件。', '不要點擊信中連結，先使用 scan-mail 或刪除信件。', 2);
             } else {
                 this.logTerminal(`[IDS 警報] 偵測到異常活動: ${newThreat.toUpperCase()} 攻擊！可先使用 limit 緩解，並暫停擷取封包以分析來源。`, "alert");
                 this.updateIdsAlert(`[流量突增] 偵測到異常 ${newThreat.toUpperCase()} 流量，請進行分析。`);
+                this.updateMissionPanel('攻擊偵測', `偵測到 ${newThreat.toUpperCase()} 攻擊，請使用 whois 分析來源。`, '先分析再封鎖，避免誤封正常服務。', 2);
             }
             this.syncPolicyButtons();
         }
@@ -197,14 +224,12 @@ class GameManager {
                 
                 const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
                 if (ipRegex.test(cleanTarget) && !this.discoveredIPs.has(cleanTarget)) {
-                    // 自動判斷攻擊種類 (依據當前活躍的威脅)
                     let detectedType = 'APT/Malware';
                     if (this.activeThreat && this.activeThreat !== 'fishing' && this.activeThreat !== 'dns') {
                         detectedType = this.activeThreat.toUpperCase();
                     } else if (cleanTarget === 'dns') {
                         detectedType = 'DNS';
                     }
-                    // 將狀態與種類一起存入
                     this.discoveredIPs.set(cleanTarget, { status: 'active', type: detectedType });
                     this.renderThreatIntel(); 
                 }
@@ -224,6 +249,9 @@ class GameManager {
             }
 
             if (resultEl) resultEl.innerHTML = outputMsg;
+            if (cleanTarget === this.activeThreat || GameDB.maliciousIPs.includes(cleanTarget)) {
+                this.updateMissionPanel('分析完成', '透過 whois 分析確認惡意來源，請立即封鎖或執行對應防禦。', '攻擊來源已確認，可以使用 block 或 unblock 解除副作用。', 3);
+            }
         }, 800);
 
         return "情報分析指令已發送...";
@@ -255,6 +283,7 @@ class GameManager {
                 this.activeLimits.push(cleanArg);
             }
             this.updateIdsAlert(`[流量管制] 已對 ${cleanArg.toUpperCase()} 實施全域限速 (Rate Limiting)。`);
+            this.updateMissionPanel('緩解措施', `已對 ${cleanArg.toUpperCase()} 流量實施限速，降低攻擊壓力。`, '請接續分析來源，或在必要時封鎖惡意 IP。', 2);
             return `[執行成功] 已限制 ${cleanArg.toUpperCase()} 頻寬。攻擊傷害暫時減弱，整體網路效能微幅下降。請把握時間找出惡意 IP！`;
         }
         return `[提示] 只能對特定協定進行限速 (如 tcp, udp, icmp, dns)。`;
@@ -284,10 +313,23 @@ class GameManager {
             this.renderRulesGUI();
             
             this.updateIdsAlert(`[全域封鎖] 阻斷所有 ${cleanArg.toUpperCase()} 流量。注意副作用！`);
+            this.updateMissionPanel('策略執行', `已封鎖 ${cleanArg.toUpperCase()} 通訊，請觀察系統反應並排查其他威脅。`, '如果是誤封請使用 unblock 還原服務。', 3);
             return `[警告] 已粗暴阻斷 ${cleanArg.toUpperCase()}。攻擊暫緩，但業務受損！查出 IP 封鎖後請用 'unblock ${cleanArg}' 解除，以免系統持續耗損。`;
         }
 
         if (GameDB.maliciousIPs.includes(cleanArg) || this.analyzedTargets.has(cleanArg)) {
+            if (cleanArg === 'ip' && this.discoveredIPs.size > 0) {
+                let resolved = false;
+                this.discoveredIPs.forEach((info, ip) => {
+                    if (info.status === 'active') {
+                        this.applyBlockAction(ip);
+                        resolved = true;
+                    }
+                });
+                if (resolved) {
+                    return `[執行成功] 已根據分析結果封鎖偵測到的惡意來源 IP。`; 
+                }
+            }
             
             this.status.reduceLoad(30); 
             this.activeThreat = null;
@@ -308,6 +350,7 @@ class GameManager {
             this.renderRulesGUI();
             
             this.updateIdsAlert(`[精準打擊] 成功攔截惡意來源 ${cleanArg}。`);
+            this.updateMissionPanel('威脅解除', `已成功封鎖惡意來源 ${cleanArg}，系統防護恢復穩定。`, '持續監控並留意後續攻擊跡象。若發現更多威脅，請繼續分析與封鎖。', 3);
             
             if (document.getElementById('analyzer-result')) {
                 document.getElementById('analyzer-result').innerHTML = "危機已解除，等待下一次分析...";
@@ -361,6 +404,7 @@ class GameManager {
             this.updateIdsAlert(`[擴展防禦] 執行 DNS 快取淨化 (規則: ${ruleId})。`);
             this.renderRulesGUI();
             this.syncPolicyButtons();
+            this.updateMissionPanel('分析完成', 'DNS 污染已解除，等待系統回復正常。', '後續可繼續觀察網路流量與伺服器狀態。', 3);
             return "[執行成功] DNS 快取已清除，重新導向安全伺服器。";
         }
         return "DNS 快取已清除。目前無異常。";
@@ -401,14 +445,13 @@ class GameManager {
         if (!listEl) return;
         
         if (this.discoveredIPs.size === 0) {
-            listEl.innerHTML = '<span style="color:#666;">尚未發現已知威脅 IP...</span>';
+            listEl.innerHTML = '<span style="color:#99a9c8;">尚未發現已知威脅 IP，請先使用 whois 分析可疑來源。</span>';
             return;
         }
 
         let html = '';
         let hasActive = false;
         
-        // 將 IP 依照攻擊種類 (type) 進行分組
         const groups = {};
         this.discoveredIPs.forEach((info, ip) => {
             if (!groups[info.type]) groups[info.type] = [];
@@ -416,37 +459,31 @@ class GameManager {
             if (info.status === 'active') hasActive = true;
         });
 
-        // 只要有活躍未封鎖的 IP，就顯示一鍵封鎖按鈕
         if (hasActive) {
             html += `<div style="margin-bottom: 12px;">
-                        <button onclick="window.gameManagerInstance.blockAllActive()" style="background: #d93025; color: #fff; border: 1px solid #ff4444; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; width: 100%; transition: 0.2s;">
+                        <button onclick="window.gameManagerInstance.blockAllActive()" style="background: #d93025; color: #fff; border: 1px solid #ff4444; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; width: 100%; transition: 0.2s;">
                             <i class="fas fa-ban"></i> ⚠️ 一鍵封鎖所有已分析危險 IP
                         </button>
                      </div>`;
         }
 
-        // 依據攻擊種類渲染標籤群組
         for (const [attackType, items] of Object.entries(groups)) {
-            html += `<div style="margin-bottom: 8px; width: 100%;">
-                        <strong style="color:#00ebff; font-size: 13px; display:block; margin-bottom: 4px; border-bottom: 1px dashed #333; padding-bottom: 2px;">
-                            <i class="fas fa-folder-open"></i> [${attackType}] 攻擊源
-                        </strong>`;
+            html += `<div class="intel-group">
+                        <strong class="intel-group-title">${attackType} 攻擊偵測</strong>`;
             
             items.forEach(item => {
                 const isBlocked = item.status === 'blocked';
-                const cls = isBlocked ? 'intel-tag blocked' : 'intel-tag';
-                const icon = isBlocked ? '<i class="fas fa-shield-alt"></i>' : '<i class="fas fa-crosshairs"></i>';
                 const action = isBlocked ? '' : `onclick="window.quickCmd('block ${item.ip}')" title="點擊立即單獨封鎖此 IP"`;
+                const statusClass = isBlocked ? 'intel-tag blocked' : 'intel-tag';
+                const labelText = isBlocked ? `${item.ip} (已封鎖)` : item.ip;
                 
-                html += `<span class="${cls}" ${action}>${icon} ${item.ip}</span>`;
+                html += `<span class="${statusClass}" ${action}>${labelText}</span>`;
             });
-            html += `</div>`;
+            html += '</div>';
         }
 
         listEl.innerHTML = html;
-    }
 
-    syncPolicyButtons() {
         ['udp', 'icmp', 'dns', 'ip'].forEach(t => {
             const btn = document.getElementById(`btn-mitigate-${t}`);
             if (btn) btn.classList.remove('active-policy');
@@ -464,8 +501,45 @@ class GameManager {
         this.mailCounter++;
         const pool = isMalicious ? GameDB.emails.malicious : GameDB.emails.normal;
         const mailData = pool[Math.floor(Math.random() * pool.length)];
-        this.inbox.unshift({ id: this.mailCounter, sender: mailData.sender, subject: mailData.subject, content: mailData.content, isMalicious: isMalicious, spawnTime: this.status.timer, read: false });
+        this.inbox.unshift({ id: this.mailCounter, sender: mailData.sender, subject: mailData.subject, content: mailData.content, isMalicious: isMalicious, spawnTime: this.status.timer, read: false, punished: false });
         this.renderMailList();
+        if (isMalicious && !this.activeThreat) {
+            this.updateMissionPanel('郵件警報', '檢測到可疑郵件，請前往收件匣閱讀或執行 scan-mail。', '釣魚信件可能夾帶惡意連結，可先刪除或掃描。', 2);
+        }
+    }
+
+    scanMailInbox() {
+        const maliciousMail = this.inbox.find(mail => mail.isMalicious);
+        if (!maliciousMail) {
+            this.updateIdsAlert("[信件防禦] 目前沒有可疑釣魚郵件。\n");
+            this.updateMissionPanel('待命中', '目前無發現釣魚郵件，繼續監控網路與系統狀態。', '可使用 status 與 netstat 追蹤下一波威脅。', 1);
+            return "[掃描完成] 目前沒有可疑郵件。";
+        }
+
+        let removedCount = 0;
+        this.inbox = this.inbox.filter(mail => {
+            if (mail.isMalicious) {
+                removedCount++;
+                return false;
+            }
+            return true;
+        });
+
+        if (removedCount > 0) {
+            this.stats.fishing += removedCount;
+            this.status.reduceLoad(15);
+            if (this.activeThreat === 'fishing') {
+                this.activeThreat = null;
+                this.peaceCooldown = 10;
+            }
+            this.renderMailList();
+            this.updateIdsAlert("[信件防禦] 已掃描並隔離釣魚郵件。系統安全提升。\n");
+            this.showNotification(`成功隔離 ${removedCount} 封釣魚郵件。`, "success");
+            this.updateMissionPanel('威脅解除', '釣魚威脅已清除，繼續監控系統與內部郵件。', '使用 status 與 netstat 追蹤下一波入侵來源。', 3);
+            return `[執行成功] 已隔離 ${removedCount} 封釣魚郵件。`;
+        }
+
+        return "[掃描完成] 目前無可疑郵件。";
     }
 
     renderMailList() { 
@@ -500,7 +574,12 @@ class GameManager {
             }
             div.className = `mail-item ${mail.read ? 'read' : 'unread'}`;
             div.onclick = () => this.viewMail(mail.id);
-            div.innerHTML = `<strong>${mail.sender}</strong>${timeWarning}<br><span style="font-size:0.9em">${mail.subject}</span>`;
+            div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
+                    <strong>${mail.sender}</strong>
+                    ${mail.isMalicious ? '<span class="mail-badge phishing">🚨 釣魚</span>' : '<span class="mail-badge normal">📩 正常</span>'}
+                </div>
+                <div style="font-size:0.9em; color:#c1d5ff;">${mail.subject}</div>
+                <div style="font-size:0.8em; color:#888; margin-top:6px;">${timeWarning.trim()}</div>`;
             list.appendChild(div);
         });
         const unreadBadge = document.getElementById('unread-count');
@@ -514,11 +593,11 @@ class GameManager {
         this.renderMailList();
         const viewer = document.getElementById('mail-viewer-container');
         if (viewer) viewer.innerHTML = `
-            <div class="mail-header"><h3>${mail.subject}</h3><p><strong>寄件者:</strong> ${mail.sender}</p></div>
+            <div class="mail-header"><h3>${mail.subject}</h3><p><strong>寄件者:</strong> ${mail.sender}</p>${mail.isMalicious ? '<p style="color:#ff7b72; font-weight:bold; margin:8px 0 0 0;">⚠️ 此郵件疑似釣魚或惡意攻擊，請勿直接回覆或點擊連結。</p>' : ''}</div>
             <div class="mail-body"><p>${mail.content.replace(/\n/g, '<br>')}</p></div>
             <div class="mail-actions">
-                <button class="btn-delete" onclick="gameManager.handleMail(${mail.id}, 'delete')">🗑️ 刪除信件 (安全)</button>
-                <button class="btn-click" onclick="gameManager.handleMail(${mail.id}, 'click')">🔗 點擊連結 / 回覆 (執行)</button>
+                <button class="btn-delete" onclick="window.handleMail(${mail.id}, 'delete')">🗑️ 刪除信件 (安全)</button>
+                <button class="btn-click" onclick="window.handleMail(${mail.id}, 'click')">🔗 點擊連結 / 回覆 (執行)</button>
             </div>`;
     }
 
@@ -536,6 +615,7 @@ class GameManager {
                 
                 this.logTerminal(`[系統通知] 成功刪除惡意釣魚郵件。`, "success");
                 this.showNotification("成功識別並銷毀釣魚威脅。","success");
+                this.updateMissionPanel('威脅解除', '已刪除惡意郵件，繼續觀察系統狀態。', '保持監控並留意新郵件。', 3);
             }
             this.inbox.splice(mailIndex, 1);
             document.getElementById('mail-viewer-container').innerHTML = '';
@@ -548,7 +628,8 @@ class GameManager {
                 this.status.applyDamage('Fishing'); 
                 this.status.applyDamage('Fishing'); 
                 this.logTerminal(`[重大警報] 誤點惡意連結，系統遭感染！`, "danger");
-                this.showNotification("警告：誤觸釣魚連結！資源大幅消耗。");
+                this.showNotification("警告：誤觸釣魚連結！資源大幅消耗。", 'danger');
+                this.updateMissionPanel('系統受損', '誤點惡意郵件，請即刻修復並保持監控。', '建議立即使用 passwd 或防火牆規則降低風險。', 3);
             }
             this.inbox.splice(mailIndex, 1);
             document.getElementById('mail-viewer-container').innerHTML = '';
@@ -611,7 +692,8 @@ class GameManager {
         filteredPackets.slice(0, 150).forEach(p => {
             const tr = document.createElement('tr');
             tr.className = p.isAttack ? 'packet-danger' : `proto-${p.proto.toLowerCase().replace('.', '')}`;  
-            tr.innerHTML = `<td>${p.time}</td><td><strong>${p.srcIP}</strong></td><td>${p.srcPort}</td><td>${p.destIP}</td><td style="color:#0077aa; font-weight:bold;">${p.destPort}</td><td>${p.proto}</td><td>${p.len}</td><td>${p.isAttack ? 'Malicious' : 'Standard'}</td>`;
+            const srcIpClass = p.isAttack || GameDB.maliciousIPs.includes(p.srcIP) ? 'warn-ip' : '';
+            tr.innerHTML = `<td>${p.time}</td><td class="${srcIpClass}"><strong>${p.srcIP}</strong></td><td>${p.srcPort}</td><td>${p.destIP}</td><td style="color:#0077aa; font-weight:bold;">${p.destPort}</td><td>${p.proto}</td><td>${p.len}</td><td>${p.isAttack ? 'Malicious' : 'Standard'}</td>`;
             
             tr.onclick = () => {
                 document.querySelectorAll('#packet-list tr').forEach(row => row.classList.remove('selected-packet'));
@@ -652,6 +734,7 @@ class GameManager {
         const color = type === "alert" ? "color:#ffaa00; font-weight:bold;" : type === "success" ? "color:#00ff00; font-weight:bold;" : type === "danger" ? "color:#ff0000; font-weight:bold;" : type === "warning" ? "color:#ff9900;" : "color:#00FF00;";
         out.innerHTML += `<div style="${color} margin-bottom: 4px;">${prefix}${msg}</div>`;
         out.scrollTop = out.scrollHeight;
+        if (type === 'alert' || type === 'danger') this.showNotification(msg, type === 'alert' ? 'danger' : 'danger');
     }
 
     endGame(reason) {
