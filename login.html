@@ -39,6 +39,7 @@
                 <label>> 密碼 (Password)</label>
                 <input type="password" id="login_password" required placeholder="請輸入密碼">
             </div>
+            <small class="hint">若尚未註冊，請先切換到「註冊帳號」</small>
             <div id="login_error" class="error-msg"></div>
             <button type="submit" class="submit-btn">認證並登入</button>
         </form>
@@ -48,10 +49,12 @@
             <div class="input-group">
                 <label>> 帳號 (Username)</label>
                 <input type="text" id="reg_username" required placeholder="設定您的學號或員編">
+                <small class="hint">4-20 字元，僅可使用英數、底線或連字號</small>
             </div>
             <div class="input-group">
                 <label>> 密碼 (Password)</label>
                 <input type="password" id="reg_password" required placeholder="設定高強度密碼">
+                <small class="hint">至少 8 個字元</small>
             </div>
             <div class="input-group">
                 <label>> 確認密碼 (Confirm Password)</label>

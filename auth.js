@@ -17,6 +17,14 @@ function switchTab(tabName) {
     document.getElementById('reg_error').className = "error-msg";
 }
 
+function isValidUsername(username) {
+    return /^[A-Za-z0-9_-]{4,20}$/.test(username);
+}
+
+function isValidPassword(password) {
+    return password.length >= 8;
+}
+
 // 處理註冊邏輯
 async function handleRegister(e) {
     e.preventDefault();
@@ -24,6 +32,26 @@ async function handleRegister(e) {
     const pwd = document.getElementById('reg_password').value;
     const confirmPwd = document.getElementById('reg_confirm_password').value;
     const errorMsg = document.getElementById('reg_error');
+
+    if (username === '' || pwd === '' || confirmPwd === '') {
+        errorMsg.className = "error-msg text-danger";
+        errorMsg.innerText = "❌ 帳號和密碼欄位不得為空。";
+        return;
+    }
+
+    if (!isValidUsername(username)) {
+        errorMsg.className = "error-msg text-danger";
+        errorMsg.innerText = "❌ 帳號格式錯誤：請輸入 4-20 字元，僅允許英文、數字、底線或連字號。";
+        document.getElementById('reg_username').focus();
+        return;
+    }
+
+    if (!isValidPassword(pwd)) {
+        errorMsg.className = "error-msg text-danger";
+        errorMsg.innerText = "❌ 密碼長度至少 8 個字元。";
+        document.getElementById('reg_password').focus();
+        return;
+    }
 
     // 前端防呆：密碼雙重確認
     if (pwd !== confirmPwd) {
@@ -81,6 +109,19 @@ async function handleLogin(e) {
     const username = document.getElementById('login_username').value.trim();
     const pwd = document.getElementById('login_password').value;
     const errorMsg = document.getElementById('login_error');
+
+    if (username === '' || pwd === '') {
+        errorMsg.className = "error-msg text-danger";
+        errorMsg.innerText = "❌ 帳號和密碼不得為空。";
+        return;
+    }
+
+    if (!isValidUsername(username)) {
+        errorMsg.className = "error-msg text-danger";
+        errorMsg.innerText = "❌ 帳號格式錯誤：請輸入 4-20 字元，僅允許英文、數字、底線或連字號。";
+        document.getElementById('login_username').focus();
+        return;
+    }
 
     errorMsg.className = "error-msg text-success";
     errorMsg.innerText = "🔄 驗證憑證中...";

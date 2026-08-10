@@ -33,7 +33,7 @@
     git clone https://github.com/your-username/security-defense-trainer.git
     ```
 2.  **執行遊戲**：
-    直接在瀏覽器中開啟 `index.html` 即可開始訓練。
+    請先開啟 `login.html` 進行登入，登入後會由系統導向訓練頁面 `index.php`。
     *(建議使用 VS Code Live Server 擴充功能以獲得最佳體驗)*
 
 -----
