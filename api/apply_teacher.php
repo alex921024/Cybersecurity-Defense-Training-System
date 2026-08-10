@@ -1,17 +1,14 @@
 <?php
 // api/apply_teacher.php
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+require_once 'common.php';
 require_once 'db_connect.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'student') {
-    echo json_encode(["status" => "error", "message" => "權限不足"]);
-    exit;
-}
+requirePost();
+$session = requireAuth('student');
 
-$data = json_decode(file_get_contents("php://input"), true);
+$data = getJsonInput();
 $teacher_username = trim($data['teacher_username'] ?? '');
-$student_id = $_SESSION['user_id'];
+$student_id = $session['user_id'];
 
 if (empty($teacher_username)) {
     echo json_encode(["status" => "error", "message" => "請輸入教師帳號"]);

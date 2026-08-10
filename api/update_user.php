@@ -1,21 +1,17 @@
 <?php
 // api/update_user.php
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+require_once 'common.php';
 require_once 'db_connect.php';
 
-// 安全攔截
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] === 'student') {
-    echo json_encode(["status" => "error", "message" => "權限不足"]);
-    exit;
-}
+requirePost();
+$session = requireAuth(['admin', 'teacher']);
 
-$data = json_decode(file_get_contents("php://input"), true);
+$data = getJsonInput();
 $action = $data['action'] ?? '';
-$target_user_id = $data['user_id'] ?? '';
+$target_user_id = intval($data['user_id'] ?? 0);
 
-$my_role = $_SESSION['role'];
-$my_id = $_SESSION['user_id'];
+$my_role = $session['role'];
+$my_id = $session['user_id'];
 
 if (empty($action) || empty($target_user_id)) {
     echo json_encode(["status" => "error", "message" => "參數遺失"]);

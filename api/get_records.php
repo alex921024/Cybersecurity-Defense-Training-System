@@ -1,19 +1,14 @@
 <?php
 // api/get_records.php
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+require_once 'common.php';
 require_once 'db_connect.php';
 
-// 安全攔截：未登入或學生無權存取
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] === 'student') {
-    echo json_encode(["status" => "error", "message" => "權限不足"]);
-    exit;
-}
+requireGet();
+$session = requireAuth(['admin', 'teacher']);
 
-$role = $_SESSION['role'];
-$user_id = $_SESSION['user_id'];
+$role = $session['role'];
+$user_id = $session['user_id'];
 
-// 檢查前端是否有傳入特定的學生 ID
 $student_id = isset($_GET['student_id']) ? intval($_GET['student_id']) : null;
 
 try {

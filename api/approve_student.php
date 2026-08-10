@@ -1,18 +1,15 @@
 <?php
 // api/approve_student.php
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+require_once 'common.php';
 require_once 'db_connect.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'teacher') {
-    echo json_encode(["status" => "error", "message" => "權限不足"]);
-    exit;
-}
+requirePost();
+$session = requireAuth('teacher');
 
-$data = json_decode(file_get_contents("php://input"), true);
-$student_id = $data['student_id'] ?? '';
+$data = getJsonInput();
+$student_id = intval($data['student_id'] ?? 0);
 $action = $data['action'] ?? ''; // 'approve' 或 'reject'
-$teacher_id = $_SESSION['user_id'];
+$teacher_id = $session['user_id'];
 
 if (empty($student_id) || empty($action)) {
     echo json_encode(["status" => "error", "message" => "參數錯誤"]);

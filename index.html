@@ -234,6 +234,20 @@
         </div>
     </div>
 
+    <script>
+        async function verifyLogin() {
+            try {
+                const response = await fetch('api/check_auth.php', { method: 'GET' });
+                const data = await response.json();
+                if (data.status !== 'success') {
+                    window.location.href = 'login.html';
+                }
+            } catch (error) {
+                window.location.href = 'login.html';
+            }
+        }
+        document.addEventListener('DOMContentLoaded', verifyLogin);
+    </script>
     <script src="threatRadar.js"></script>
     <script type="module">
         import GameManager from './gameManager.js';

@@ -1,16 +1,13 @@
 <?php
 // api/get_users.php
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+require_once 'common.php';
 require_once 'db_connect.php';
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] === 'student') {
-    echo json_encode(["status" => "error", "message" => "權限不足"]);
-    exit;
-}
+requireGet();
+$session = requireAuth(['admin', 'teacher']);
 
-$role = $_SESSION['role'];
-$user_id = $_SESSION['user_id'];
+$role = $session['role'];
+$user_id = $session['user_id'];
 
 try {
     if ($role === 'admin') {

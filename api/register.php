@@ -1,20 +1,30 @@
 <?php
 // api/register.php
-header('Content-Type: application/json; charset=utf-8');
-
-// 引入資料庫連線設定
+require_once 'common.php';
 require_once 'db_connect.php';
 
-// 接收前端透過 Fetch 傳遞過來的 JSON 資料
-$data = json_decode(file_get_contents("php://input"), true);
+requirePost();
 
-$username = $data['username'] ?? '';
+// 接收前端透過 Fetch 傳遞過來的 JSON 資料
+$data = getJsonInput();
+
+$username = trim($data['username'] ?? '');
 $password = $data['password'] ?? '';
 $confirm_password = $data['confirm_password'] ?? '';
 
 // 1. 後端防呆與雙重密碼驗證 (深度防禦)
 if (empty($username) || empty($password)) {
     echo json_encode(["status" => "error", "message" => "帳號與密碼不得為空！"]);
+    exit;
+}
+
+if (!validateUsername($username)) {
+    echo json_encode(["status" => "error", "message" => "帳號格式不正確，請使用 4-20 字元的英數或底線"]);
+    exit;
+}
+
+if (!validatePassword($password)) {
+    echo json_encode(["status" => "error", "message" => "密碼長度至少 8 個字元！"]);
     exit;
 }
 

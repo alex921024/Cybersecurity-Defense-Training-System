@@ -1,63 +1,53 @@
-import SystemStatus from './systemStatus.js';
-import GameDB from './database.js';
-import CLIModule from './cliModule.js';
+<?php
+// api/get_game_data.php
+require_once 'common.php';
+require_once 'db_connect.php';
 
-class GameManager {
-    constructor() {
-        this.status = null;
-        this.interval = null;
-        this.activeThreat = null;
-        this.cli = new CLIModule(this);
-        this.difficultyConfig = null;
-        this.charts = { cpu: null, gpu: null, ram: null, hack: null };
-        this.maxDataPoints = 30;
-        
-        this.inbox = [];
-        this.mailCounter = 0;
-        this.packetHistory = [];
-        this.stats = { syn: 0, udp: 0, dns: 0, icmp: 0, fishing: 0 };
-        this.activeRules = []; 
-        this.analyzedTargets = new Set(); 
+requireGet();
 
-        this.isPacketPaused = false;
-        this.activeSideEffects = [];
-        this.activeLimits = [];
-        
-        this.discoveredIPs = new Map();
-        
-        this.peaceCooldown = 0;
-        this.attackCooldown = 0;
+try {
+    $threatStmt = $pdo->prepare("SELECT ip_address FROM threat_ips WHERE is_active = 1");
+    $threatStmt->execute();
+    $maliciousIPs = array_column($threatStmt->fetchAll(PDO::FETCH_ASSOC), 'ip_address');
 
-        if (typeof ThreatRadar !== 'undefined') {
-            this.radar = new ThreatRadar();
-        } else {
-            this.radar = null;
+    $vipStmt = $pdo->prepare("SELECT ip_address FROM vip_ips");
+    $vipStmt->execute();
+    $vipIPs = array_column($vipStmt->fetchAll(PDO::FETCH_ASSOC), 'ip_address');
+
+    $emailStmt = $pdo->prepare("SELECT sender, subject, content, is_malicious FROM phishing_emails");
+    $emailStmt->execute();
+    $emails = $emailStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $difficultyStmt = $pdo->prepare("SELECT diff_id, total_time, attack_rates FROM difficulty_configs ORDER BY diff_id ASC");
+    $difficultyStmt->execute();
+    $difficultyRows = $difficultyStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $difficulties = [];
+    foreach ($difficultyRows as $row) {
+        $attackRates = json_decode($row['attack_rates'], true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            $attackRates = null;
         }
-
-        document.getElementById('cmd-input').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                const val = e.target.value;
-                if(val.trim() !== "") this.logTerminal(val, "user");
-                const res = this.cli.execute(val);
-                if(res) this.logTerminal(res, "system");
-                e.target.value = '';
-            }
-        });
-
-        const filterEl = document.getElementById('protocol-filter');
-        if (filterEl) filterEl.addEventListener('change', () => this.renderPackets());
-        
-        window.togglePacketCapture = () => this.togglePacketCapture();
-        window.gameManager = this;
-        window.gameManagerInstance = this; 
+        $difficulties[intval($row['diff_id'])] = [
+            'time' => intval($row['total_time']),
+            'ranges' => $attackRates
+        ];
     }
 
-    // 將 init 改為 async 以支援 fetch 從資料庫讀取動態題庫
-    async init(difficulty) {
-        document.getElementById('menu-screen').classList.remove('active');
-        document.getElementById('game-screen').classList.add('active');
-        document.getElementById('terminal-output').innerHTML = '';
-        
+    echo json_encode([
+        'status' => 'success',
+        'maliciousIPs' => $maliciousIPs,
+        'vipIPs' => $vipIPs,
+        'emails' => [
+            'normal' => array_values(array_filter($emails, fn($e) => intval($e['is_malicious']) === 0)),
+            'malicious' => array_values(array_filter($emails, fn($e) => intval($e['is_malicious']) === 1))
+        ],
+        'difficulties' => $difficulties
+    ]);
+} catch (PDOException $e) {
+    echo json_encode(["status" => "error", "message" => "無法讀取遊戲資料庫設定"]);
+}
+?>        
         // 1. 嘗試從後端資料庫載入動態題庫
         try {
             const response = await fetch('api/get_game_data.php');

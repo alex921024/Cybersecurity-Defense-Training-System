@@ -1,19 +1,25 @@
 <?php
 // api/login.php
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+require_once 'common.php';
 require_once 'db_connect.php';
 
-// 1. 僅允許 POST 請求
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    echo json_encode(["status" => "error", "message" => "不合法的請求方法"]);
+requirePost();
+session_start();
+
+// 2. 取得前端傳入的 JSON 數據
+$data = getJsonInput();
+$username = trim($data['username'] ?? '');
+$password = $data['password'] ?? '';
+
+if (empty($username) || empty($password)) {
+    echo json_encode(["status" => "error", "message" => "帳號與密碼不得為空"]);
     exit;
 }
 
-// 2. 取得前端傳入的 JSON 數據
-$data = json_decode(file_get_contents("php://input"), true);
-$username = trim($data['username'] ?? '');
-$password = $data['password'] ?? '';
+if (!validateUsername($username)) {
+    echo json_encode(["status" => "error", "message" => "帳號格式不正確，請輸入英文、數字或底線"]);
+    exit;
+}
 
 if (empty($username) || empty($password)) {
     echo json_encode(["status" => "error", "message" => "帳號與密碼不得為空"]);

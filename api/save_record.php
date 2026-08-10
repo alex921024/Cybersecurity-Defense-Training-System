@@ -1,26 +1,26 @@
 <?php
 // api/save_record.php
-session_start();
-header('Content-Type: application/json; charset=utf-8');
+require_once 'common.php';
 require_once 'db_connect.php';
 
-// 1. 安全攔截：確認玩家是否已登入
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(["status" => "error", "message" => "尚未登入，無法儲存紀錄"]);
-    exit;
-}
+requirePost();
+$session = requireAuth();
 
-$user_id = $_SESSION['user_id'];
+$user_id = $session['user_id'];
 
 // 2. 接收前端傳送的 JSON 結算資料
-$data = json_decode(file_get_contents("php://input"), true);
+$data = getJsonInput();
 
-$difficulty = $data['difficulty'] ?? 0;
-$survival_time = $data['survival_time'] ?? 0;
-$final_score = $data['final_score'] ?? 0;
-$end_reason = $data['end_reason'] ?? 'UNKNOWN';
-// 將操作日誌陣列轉為 JSON 字串以便存入資料庫
+$difficulty = intval($data['difficulty'] ?? 0);
+$survival_time = intval($data['survival_time'] ?? 0);
+$final_score = intval($data['final_score'] ?? 0);
+$end_reason = trim($data['end_reason'] ?? 'UNKNOWN');
 $action_logs = isset($data['action_logs']) ? json_encode($data['action_logs'], JSON_UNESCAPED_UNICODE) : '[]';
+
+if ($difficulty < 0 || $survival_time < 0 || $final_score < 0) {
+    echo json_encode(["status" => "error", "message" => "傳入資料無效"]);
+    exit;
+}
 
 try {
     // 3. 寫入資料庫
