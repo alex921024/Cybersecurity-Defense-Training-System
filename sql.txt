@@ -1,6 +1,10 @@
--- 建立資料庫 
+-- 建立資料庫 (若尚未建立的話可取消註解)
 -- CREATE DATABASE IF NOT EXISTS soc_training_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- USE soc_training_db;
+
+-- =========================================
+-- 一、 帳號與權限管理
+-- =========================================
 
 -- 1. 使用者與權限管理表 (users)
 CREATE TABLE users (
@@ -13,7 +17,37 @@ CREATE TABLE users (
     FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2. 遊戲歷程與成效統計表 (game_records)
+-- 2. 已刪除帳號備份表 / 資源回收桶 (deleted_users_backup)
+CREATE TABLE deleted_users_backup (
+    backup_id INT AUTO_INCREMENT PRIMARY KEY,
+    original_user_id INT NOT NULL,
+    username VARCHAR(50) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('student', 'teacher', 'admin') NOT NULL,
+    teacher_id INT DEFAULT NULL,
+    account_created_at DATETIME,
+    deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    deleted_by INT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 3. 帳號操作稽核紀錄表 (account_operation_logs)
+CREATE TABLE account_operation_logs (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    operator_id INT NULL,                 
+    action_type VARCHAR(50) NOT NULL,     
+    target_username VARCHAR(50),          
+    ip_address VARCHAR(45),               
+    device_info VARCHAR(255),             
+    details JSON,                         
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (operator_id) REFERENCES users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================================
+-- 二、 遊戲成效與操作統計
+-- =========================================
+
+-- 4. 遊戲結算紀錄表 (game_records)
 CREATE TABLE game_records (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -26,14 +60,18 @@ CREATE TABLE game_records (
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3. 遊戲難易度設定表 (difficulty_configs)
+-- =========================================
+-- 三、 遊戲動態題庫設定
+-- =========================================
+
+-- 5. 遊戲難易度設定表 (difficulty_configs)
 CREATE TABLE difficulty_configs (
     diff_id INT PRIMARY KEY,
     total_time INT NOT NULL,
     attack_rates JSON NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 4. 惡意 IP 題庫表 (threat_ips)
+-- 6. 惡意 IP 題庫表 (threat_ips)
 CREATE TABLE threat_ips (
     ip_id INT AUTO_INCREMENT PRIMARY KEY,
     ip_address VARCHAR(45) NOT NULL,
@@ -42,14 +80,14 @@ CREATE TABLE threat_ips (
     is_active BOOLEAN DEFAULT TRUE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 5. 正常業務 IP 表 / 誤殺地雷 (vip_ips)
+-- 7. 正常業務 IP 表 / 誤殺地雷 (vip_ips)
 CREATE TABLE vip_ips (
     ip_id INT AUTO_INCREMENT PRIMARY KEY,
     ip_address VARCHAR(45) NOT NULL,
     description VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 6. 郵件題庫表 (phishing_emails)
+-- 8. 郵件題庫表 (phishing_emails)
 CREATE TABLE phishing_emails (
     email_id INT AUTO_INCREMENT PRIMARY KEY,
     sender VARCHAR(100) NOT NULL,
