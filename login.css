@@ -1,0 +1,96 @@
+:root {
+    --bg-color: #050a0f;
+    --terminal-green: #00FF00;
+    --win11-blue: #00ebff;
+    --danger-red: #ff4444;
+    --panel-bg: #0d1520;
+    --border-color: #1f2c3a;
+}
+
+body, html {
+    margin: 0; padding: 0; height: 100%;
+    background-color: var(--bg-color);
+    color: var(--terminal-green);
+    font-family: 'Courier New', Courier, monospace;
+    display: flex; align-items: center; justify-content: center;
+}
+
+.container {
+    display: flex;
+    width: 80%; max-width: 1000px; height: 70vh; min-height: 500px;
+    background: var(--panel-bg);
+    border: 2px solid var(--border-color);
+    box-shadow: 0 0 30px rgba(0, 235, 255, 0.1);
+    border-radius: 8px; overflow: hidden;
+}
+
+/* 左側：系統介紹區 */
+.intro-section {
+    flex: 1; padding: 40px;
+    background: linear-gradient(135deg, #08111b 0%, #050a0f 100%);
+    border-right: 2px solid var(--border-color);
+    display: flex; flex-direction: column; justify-content: center;
+}
+
+.intro-section h1 {
+    color: var(--win11-blue); font-size: 2.2em; margin-top: 0;
+    text-shadow: 0 0 10px rgba(0, 235, 255, 0.4);
+}
+
+.intro-section p {
+    color: #a7b8d6; line-height: 1.6; font-size: 1.05em;
+}
+
+.system-specs {
+    margin-top: 20px; padding: 15px;
+    background: rgba(0, 255, 0, 0.05); border-left: 4px solid var(--terminal-green);
+    font-size: 0.9em;
+}
+
+.status-online {
+    color: var(--terminal-green);
+}
+
+/* 右側：驗證表單區 */
+.auth-section {
+    flex: 1; padding: 40px; position: relative;
+    display: flex; flex-direction: column; justify-content: center;
+}
+
+.tab-headers {
+    display: flex; margin-bottom: 30px; border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn {
+    flex: 1; background: transparent; border: none; color: #888;
+    padding: 10px; font-size: 1.2em; cursor: pointer; transition: 0.3s;
+    font-family: inherit; font-weight: bold;
+}
+
+.tab-btn.active { color: var(--win11-blue); border-bottom: 2px solid var(--win11-blue); }
+.tab-btn:hover { color: var(--terminal-green); }
+
+.auth-form { display: none; flex-direction: column; gap: 15px; }
+.auth-form.active { display: flex; }
+
+.input-group { display: flex; flex-direction: column; gap: 5px; }
+.input-group label { color: #d4e4f5; font-size: 0.9em; }
+.input-group input {
+    background: #020609; border: 1px solid var(--border-color);
+    color: var(--terminal-green); padding: 12px; font-family: inherit; outline: none;
+}
+.input-group input:focus { border-color: var(--win11-blue); box-shadow: 0 0 8px rgba(0, 235, 255, 0.2); }
+
+.submit-btn {
+    background: #1a73e8; color: #fff; border: none; padding: 12px;
+    font-family: inherit; font-size: 1.1em; font-weight: bold; cursor: pointer;
+    border-radius: 4px; margin-top: 10px; transition: 0.2s;
+}
+.submit-btn:hover { background: #1557b0; }
+
+.register-btn { background: #008f11; }
+.register-btn:hover { background: #00660c; }
+
+.error-msg { font-size: 0.85em; text-align: center; height: 20px; transition: 0.2s; }
+.text-danger { color: var(--danger-red); }
+.text-success { color: var(--terminal-green); }

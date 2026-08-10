@@ -1,0 +1,219 @@
+:root {
+    --bg-color: #050a0f;
+    --sidebar-bg: #0b141e;
+    --panel-bg: #0d1520;
+    --border-color: #1f2c3a;
+    --text-main: #d4e4f5;
+    --win11-blue: #00ebff;
+    --terminal-green: #00FF00;
+}
+
+body, html {
+    margin: 0; padding: 0; height: 100%;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    font-family: 'Courier New', Courier, monospace;
+    display: flex;
+}
+
+/* 側邊欄 */
+.sidebar {
+    width: 250px;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    display: flex; flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.sidebar-header h2 {
+    color: var(--win11-blue);
+    margin: 0 0 10px 0;
+    font-size: 1.2em;
+}
+
+.user-info {
+    font-size: 0.85em;
+    color: #888;
+    line-height: 1.5;
+}
+
+.menu {
+    flex: 1; padding: 15px 0;
+    display: flex; flex-direction: column;
+}
+
+.menu-btn {
+    background: transparent; border: none;
+    color: #888; padding: 15px 20px;
+    text-align: left; font-family: inherit; font-size: 1em;
+    cursor: pointer; transition: 0.2s;
+}
+
+.menu-btn i { margin-right: 10px; width: 20px; text-align: center; }
+.menu-btn:hover { color: var(--terminal-green); background: rgba(0, 255, 0, 0.05); }
+.menu-btn.active {
+    color: var(--terminal-green);
+    border-left: 4px solid var(--terminal-green);
+    background: rgba(0, 255, 0, 0.1);
+}
+
+.logout-btn {
+    background: #ff4444; color: #fff;
+    border: none; padding: 15px; cursor: pointer;
+    font-family: inherit; font-weight: bold;
+    transition: 0.2s;
+}
+.logout-btn:hover { background: #cc0000; }
+
+/* 主內容區 */
+.main-content {
+    flex: 1; display: flex; flex-direction: column;
+}
+
+.topbar {
+    padding: 20px 30px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--sidebar-bg);
+}
+
+.topbar h2 { margin: 0; font-size: 1.4em; color: #fff; }
+
+.content-area {
+    padding: 30px; flex: 1; overflow-y: auto;
+}
+
+.panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px; padding: 20px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+.panel h3 {
+    margin-top: 0; color: var(--win11-blue);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+/* =========================================
+   資料表基礎樣式 (Data Table)
+========================================= */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    color: #d4e4f5;
+    font-size: 0.95em;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #1f2c3a;
+}
+
+.data-table th {
+    background-color: #0b141e;
+    color: #00ebff;
+    font-weight: bold;
+}
+
+.data-table tr:hover {
+    background-color: rgba(0, 235, 255, 0.05);
+}
+
+/* =========================================
+   操作按鈕樣式 (Action Buttons)
+========================================= */
+.btn-action {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    margin-right: 5px;
+    color: #fff;
+    font-size: 0.85em;
+    transition: 0.2s;
+}
+
+.btn-upgrade {
+    background-color: #ffaa00;
+}
+
+.btn-upgrade:hover {
+    background-color: #cc8800;
+}
+
+.btn-bind {
+    background-color: #00ebff;
+    color: #000;
+}
+
+.btn-bind:hover {
+    background-color: #00b8cc;
+}
+
+.btn-unbind {
+    background-color: #ff4444;
+}
+
+.btn-unbind:hover {
+    background-color: #cc0000;
+}
+
+.btn-view {
+    background-color: #00FF00;
+    color: #000;
+}
+
+.btn-view:hover {
+    background-color: #00cc00;
+}
+
+/* =========================================
+   身分標籤樣式 (Badges)
+========================================= */
+.badge {
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.badge-teacher {
+    background: rgba(255, 170, 0, 0.2);
+    color: #ffaa00;
+    border: 1px solid #ffaa00;
+}
+
+.badge-student {
+    background: rgba(0, 235, 255, 0.2);
+    color: #00ebff;
+    border: 1px solid #00ebff;
+}
+
+/* =========================================
+   分頁與圖表容器顯示控制 (Tabs & Charts)
+========================================= */
+.tab-section {
+    display: none;
+}
+
+.tab-section.active {
+    display: block;
+}
+
+.chart-container {
+    background: #0b141e;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #1f2c3a;
+    margin-top: 15px;
+    height: 350px;
+}

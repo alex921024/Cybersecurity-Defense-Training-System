@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOC 控制中心 - 管理後台</title>
+    <!-- 引入獨立的 CSS 樣式表 -->
+    <link rel="stylesheet" href="dashboard.css">
+    <!-- 引入 FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- 引入 Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- 側邊導覽列 -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>SOC 管理後台</h2>
+            <div class="user-info">
+                登入者: <span id="display-username" style="color: #00ebff;">載入中...</span><br>
+                身分: <span id="display-role" style="color: #ffaa00;">...</span>
+            </div>
+        </div>
+        <nav class="menu">
+            <button class="menu-btn active" onclick="switchTab('users', this)"><i class="fas fa-users"></i> 帳號清單與審核</button>
+            <button class="menu-btn" onclick="switchTab('analytics', this)"><i class="fas fa-chart-line"></i> 訓練成效分析</button>
+            <button class="menu-btn" onclick="switchTab('logs', this)"><i class="fas fa-history"></i> 操作日誌回放</button>
+            <button class="menu-btn admin-only" style="display:none;" onclick="switchTab('questions', this)"><i class="fas fa-database"></i> 動態題庫管理</button>
+        </nav>
+        <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> 安全登出</button>
+    </aside>
+
+    <!-- 主要內容區 -->
+    <main class="main-content">
+        
+        <!-- ================= 帳號管理與審核分頁 ================= -->
+        <section id="tab-users" class="content-area tab-section active">
+            <header class="topbar" style="margin: -30px -30px 20px -30px; padding: 20px 30px;">
+                <h2><i class="fas fa-users"></i> 帳號清單與導師審核</h2>
+            </header>
+            <div class="panel">
+                <h3>系統成員與綁定申請列表</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>帳號名稱</th>
+                            <th>權限角色</th>
+                            <th>管理狀態 / 審核</th>
+                            <th>操作選項</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body">
+                        <tr><td colspan="5" style="text-align: center;">資料載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ================= 訓練成效分析分頁 ================= -->
+        <section id="tab-analytics" class="content-area tab-section">
+            <header class="topbar" style="margin: -30px -30px 20px -30px; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;"><i class="fas fa-chart-line"></i> 訓練成效分析</h2>
+                <button id="btn-view-all" class="btn-action btn-bind" style="display:none; margin:0;" onclick="loadAnalytics()">
+                    <i class="fas fa-users"></i> 查看全體成績
+                </button>
+            </header>
+            <div class="panel">
+                <h3 id="analytics-title">全體學生成績分佈 (最近 20 筆紀錄)</h3>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+        </section>
+        
+        <!-- ================= 日誌回放分頁 ================= -->
+        <section id="tab-logs" class="content-area tab-section">
+            <header class="topbar" style="margin: -30px -30px 20px -30px; padding: 20px 30px;">
+                <h2><i class="fas fa-history"></i> 操作日誌回放 (SOP 檢視)</h2>
+            </header>
+            
+            <div style="display: flex; gap: 20px; height: calc(100vh - 180px); min-height: 400px;">
+                <!-- 左側：歷史紀錄列表 -->
+                <div class="panel" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column;">
+                    <h3 style="margin-top: 0;">最近遊戲紀錄</h3>
+                    <div style="flex: 1; overflow-y: auto; border: 1px solid #1f2c3a; background: #0b141e;">
+                        <table class="data-table" style="margin-top: 0;">
+                            <thead>
+                                <tr>
+                                    <th>玩家</th>
+                                    <th>難度</th>
+                                    <th>存活</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body">
+                                <tr><td colspan="4" style="text-align: center;">載入中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- 右側：虛擬終端機回放畫面 -->
+                <div class="panel" style="flex: 1.5; display: flex; flex-direction: column;">
+                    <h3 style="margin-top: 0;">指令回放終端機</h3>
+                    <div id="replay-terminal" style="flex: 1; background: #000; color: #00FF00; font-family: 'Courier New', monospace; padding: 15px; overflow-y: auto; border: 1px solid #333; border-radius: 4px; font-size: 14px; line-height: 1.6;">
+                        <span style="color: #666;">等待選擇紀錄... 請點擊左側列表的「回放」按鈕。</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= 動態題庫管理分頁 ================= -->
+        <section id="tab-questions" class="content-area tab-section">
+            <header class="topbar" style="margin: -30px -30px 20px -30px; padding: 20px 30px;">
+                <h2><i class="fas fa-database"></i> 動態題庫與系統設定 (管理員專區)</h2>
+            </header>
+            
+            <!-- 新增題庫表單面板 -->
+            <div class="panel" style="margin-bottom: 20px;">
+                <h3>新增惡意 IP 威脅題庫</h3>
+                <form id="add-threat-form" onsubmit="handleAddNewThreat(event)" style="display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; font-size: 0.85em; color: #a7b8d6; margin-bottom: 5px;">攻擊 IP 位址</label>
+                        <input type="text" id="new-ip" placeholder="例如: 203.0.113.55" required style="width: 100%; padding: 10px; background: #050b14; border: 1px solid #1f2c3a; color: #fff; border-radius: 4px;">
+                    </div>
+                    <div style="flex: 1; min-width: 150px;">
+                        <label style="display: block; font-size: 0.85em; color: #a7b8d6; margin-bottom: 5px;">攻擊種類</label>
+                        <select id="new-type" style="width: 100%; padding: 10px; background: #050b14; border: 1px solid #1f2c3a; color: #fff; border-radius: 4px;">
+                            <option value="syn">SYN Flood</option>
+                            <option value="udp">UDP Flood</option>
+                            <option value="icmp">ICMP Flood</option>
+                            <option value="dns">DNS Amplification</option>
+                        </select>
+                    </div>
+                    <div style="flex: 2; min-width: 250px;">
+                        <label style="display: block; font-size: 0.85em; color: #a7b8d6; margin-bottom: 5px;">封包特徵描述 (Payload)</label>
+                        <input type="text" id="new-payload" placeholder="例如: [SYN] Malicious Handshake Flood" required style="width: 100%; padding: 10px; background: #050b14; border: 1px solid #1f2c3a; color: #fff; border-radius: 4px;">
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button type="submit" class="btn-action btn-bind" style="height: 41px; padding: 0 20px;"><i class="fas fa-plus"></i> 確認新增</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- 現有題庫列表面板 -->
+            <div class="panel">
+                <h3>現有惡意 IP 題庫清單</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>惡意 IP 位址</th>
+                            <th>攻擊類型</th>
+                            <th>封包特徵描述</th>
+                            <th>狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="threat-table-body">
+                        <tr><td colspan="5" style="text-align: center;">載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let currentUserRole = '';
+        let currentUserId = null;
+        let performanceChartInstance = null; 
+        let allGameRecords = []; 
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            await checkAuth();
+            await loadUserList();
+        });
+
+        // ==========================================
+        // 1. 頁面分頁切換邏輯
+        // ==========================================
+        function switchTab(tabId, btnElement) {
+            document.querySelectorAll('.tab-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.menu-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            if(btnElement) btnElement.classList.add('active');
+            
+            if (tabId === 'analytics') {
+                loadAnalytics();
+            }
+            if (tabId === 'logs') {
+                loadActionLogs();
+            }
+            if (tabId === 'questions') {
+                loadThreatsAdmin();
+            }
+        }
+
+        // ==========================================
+        // 2. 驗證登入與身分
+        // ==========================================
+        async function checkAuth() {
+            try {
+                const response = await fetch('api/check_auth.php');
+                const data = await response.json();
+                
+                if (data.status !== "success" || data.role === "student") {
+                    alert("權限不足或未登入！");
+                    window.location.href = "login.html"; 
+                    return;
+                }
+                
+                document.getElementById('display-username').innerText = data.username;
+                document.getElementById('display-role').innerText = data.role.toUpperCase();
+                currentUserRole = data.role; 
+                currentUserId = data.user_id;
+                
+                if (data.role === "admin") {
+                    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+                }
+            } catch (error) { 
+                window.location.href = "login.html"; 
+            }
+        }
+
+        // ==========================================
+        // 3. 帳號清單與審核管理
+        // ==========================================
+        async function loadUserList() {
+            try {
+                const response = await fetch('api/get_users.php');
+                const result = await response.json();
+                if (result.status === 'success') {
+                    renderTable(result.data);
+                }
+            } catch (error) { 
+                console.error("載入名單失敗:", error); 
+            }
+        }
+
+        function renderTable(users) {
+            const tbody = document.getElementById('user-table-body');
+            tbody.innerHTML = '';
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">目前沒有任何帳號資料</td></tr>';
+                return;
+            }
+
+            users.forEach(user => {
+                const tr = document.createElement('tr');
+                
+                const roleBadge = user.role === 'teacher' 
+                    ? `<span class="badge badge-teacher">教師</span>` 
+                    : `<span class="badge badge-student">學生</span>`;
+
+                let statusText = "<span style='color:#888;'>未綁定</span>";
+                let actionButtons = "";
+
+                if (user.role === 'student') {
+                    if (user.teacher_id == currentUserId) {
+                        if (user.is_approved == 0) {
+                            statusText = "<span style='color:#ffaa00; font-weight:bold;'>⚠️ 申請加入中 (待審核)</span>";
+                        } else {
+                            statusText = "<span style='color:#00FF00;'>您管理中</span>";
+                        }
+                    } else if (user.teacher_id) {
+                        statusText = "<span style='color:#888;'>其他教師管理中</span>";
+                    }
+                }
+
+                if (currentUserRole === 'admin' && user.role === 'student') {
+                    actionButtons += `<button class="btn-action btn-upgrade" onclick="updateUser(${user.user_id}, 'upgrade_to_teacher')"><i class="fas fa-arrow-up"></i> 升級為教師</button>`;
+                    actionButtons += `<button class="btn-action btn-view" onclick="viewStudentRecords(${user.user_id}, '${user.username}')"><i class="fas fa-chart-bar"></i> 查看狀況</button>`;
+                } 
+                else if (currentUserRole === 'teacher' && user.role === 'student') {
+                    if (!user.teacher_id) {
+                        actionButtons += `<button class="btn-action btn-bind" onclick="updateUser(${user.user_id}, 'bind_student')"><i class="fas fa-link"></i> 加入管理</button>`;
+                    } else if (user.teacher_id == currentUserId) {
+                        if (user.is_approved == 0) {
+                            actionButtons += `<button class="btn-action btn-bind" onclick="approveStudent(${user.user_id}, 'approve')"><i class="fas fa-check"></i> 同意</button>`;
+                            actionButtons += `<button class="btn-action btn-unbind" onclick="approveStudent(${user.user_id}, 'reject')"><i class="fas fa-times"></i> 拒絕</button>`;
+                        } else {
+                            actionButtons += `<button class="btn-action btn-unbind" onclick="updateUser(${user.user_id}, 'unbind_student')"><i class="fas fa-unlink"></i> 移出管理</button>`;
+                            actionButtons += `<button class="btn-action btn-view" onclick="viewStudentRecords(${user.user_id}, '${user.username}')"><i class="fas fa-chart-bar"></i> 查看狀況</button>`;
+                        }
+                    }
+                }
+
+                tr.innerHTML = `
+                    <td>${user.user_id}</td>
+                    <td><strong style="color: #fff;">${user.username}</strong></td>
+                    <td>${roleBadge}</td>
+                    <td>${user.role === 'student' ? statusText : '-'}</td>
+                    <td>${actionButtons || '<span style="color:#666;">無可用操作</span>'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function updateUser(targetUserId, actionType) {
+            const confirmMsg = {
+                'upgrade_to_teacher': "確定要將此學生帳號升級為「教師」嗎？此操作將賦予其管理權限。",
+                'bind_student': "確定要將此學生加入您的管理清單嗎？",
+                'unbind_student': "確定要解除對此學生的管理綁定嗎？"
+            };
+
+            if (!confirm(confirmMsg[actionType])) return;
+
+            try {
+                const response = await fetch('api/update_user.php', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ user_id: targetUserId, action: actionType }) 
+                });
+                const result = await response.json();
+                if (result.status === 'success') { 
+                    alert(result.message); 
+                    loadUserList(); 
+                } else {
+                    alert("操作失敗: " + result.message);
+                }
+            } catch (error) { 
+                alert("網路錯誤！"); 
+            }
+        }
+
+        async function approveStudent(targetUserId, actionType) {
+            const msg = actionType === 'approve' ? "確定要同意該學生的加入申請嗎？" : "確定要拒絕該學生的申請嗎？";
+            if (!confirm(msg)) return;
+
+            try {
+                const response = await fetch('api/approve_student.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: targetUserId, action: actionType })
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') {
+                    loadUserList();
+                }
+            } catch (error) {
+                alert("網路連線錯誤！");
+            }
+        }
+
+        // ==========================================
+        // 4. 訓練成效分析圖表邏輯
+        // ==========================================
+        function viewStudentRecords(studentId, studentName) {
+            switchTab('analytics', document.querySelectorAll('.menu-btn')[1]);
+            loadAnalytics(studentId, studentName);
+        }
+
+        async function loadAnalytics(studentId = null, studentName = null) {
+            try {
+                let apiUrl = 'api/get_records.php';
+                if (studentId) {
+                    apiUrl += `?student_id=${studentId}`;
+                }
+
+                const response = await fetch(apiUrl);
+                const result = await response.json();
+                
+                const container = document.querySelector('.chart-container');
+                const titleEl = document.getElementById('analytics-title');
+                const viewAllBtn = document.getElementById('btn-view-all');
+                
+                if (studentId) {
+                    titleEl.innerText = `[${studentName}] 的個人成績分佈 (最近 20 筆紀錄)`;
+                    viewAllBtn.style.display = 'inline-block';
+                } else {
+                    titleEl.innerText = `全體學生成績分佈 (最近 20 筆紀錄)`;
+                    viewAllBtn.style.display = 'none';
+                }
+                
+                if (result.status === 'success') {
+                    if (result.data.length === 0) {
+                        if(performanceChartInstance) performanceChartInstance.destroy();
+                        const emptyMsg = studentId ? `暫無資料 (學員 ${studentName} 尚未有結算紀錄)` : "暫無資料 (尚未有任何結算紀錄)";
+                        container.innerHTML = `
+                            <div style="display:flex; justify-content:center; align-items:center; height:100%; color:#a7b8d6; font-size:1.2em; font-weight:bold;">
+                                <i class="fas fa-folder-open" style="margin-right:10px;"></i> ${emptyMsg}
+                            </div>`;
+                        return;
+                    }
+
+                    container.innerHTML = '<canvas id="performanceChart"></canvas>';
+                    const ctx = document.getElementById('performanceChart').getContext('2d');
+                    const data = result.data.slice(0, 20); 
+                    
+                    const labels = data.map(r => `${r.username} (Diff ${r.difficulty})`);
+                    const scores = data.map(r => r.final_score || r.survival_time);
+                    
+                    if(performanceChartInstance) performanceChartInstance.destroy();
+
+                    performanceChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: '存活時間 (秒)',
+                                data: scores,
+                                backgroundColor: 'rgba(0, 235, 255, 0.5)',
+                                borderColor: 'rgba(0, 235, 255, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: '#1f2c3a' }, ticks: { color: '#a7b8d6' } },
+                                x: { grid: { color: '#1f2c3a' }, ticks: { color: '#a7b8d6' } }
+                            },
+                            plugins: { legend: { labels: { color: '#d4e4f5' } } }
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error("圖表載入失敗:", error);
+            }
+        }
+
+        // ==========================================
+        // 5. 操作日誌回放邏輯
+        // ==========================================
+        async function loadActionLogs() {
+            try {
+                const response = await fetch('api/get_records.php');
+                const result = await response.json();
+                
+                const tbody = document.getElementById('logs-table-body');
+                tbody.innerHTML = '';
+                
+                if (result.status === 'success') {
+                    allGameRecords = result.data;
+                    
+                    if (allGameRecords.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">暫無遊戲紀錄</td></tr>';
+                        return;
+                    }
+
+                    allGameRecords.forEach(record => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><strong style="color:#00ebff;">${record.username}</strong></td>
+                            <td>LV.${record.difficulty}</td>
+                            <td>${record.survival_time}s</td>
+                            <td>
+                                <button class="btn-action btn-view" onclick="playActionLog(${record.record_id})">
+                                    <i class="fas fa-play"></i> 回放
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (error) {
+                console.error("日誌列表載入失敗:", error);
+            }
+        }
+
+        function playActionLog(recordId) {
+            const record = allGameRecords.find(r => r.record_id == recordId);
+            const terminal = document.getElementById('replay-terminal');
+            
+            if (!record) return;
+
+            terminal.innerHTML = `<div style="color: #00ebff; font-weight: bold;">[系統] 載入玩家 ${record.username} 的實戰操作日誌...</div>`;
+            terminal.innerHTML += `<div style="color: #a7b8d6;">[結算狀態] ${record.end_reason} | 難度: LV.${record.difficulty} | 存活: ${record.survival_time} 秒 | 分數: ${record.final_score}</div>`;
+            terminal.innerHTML += `<hr style="border-top: 1px dashed #333; margin: 10px 0;">`;
+
+            try {
+                const logs = JSON.parse(record.action_logs);
+                
+                if (!logs || logs.length === 0) {
+                    terminal.innerHTML += `<div style="color: #ff4444; margin-top: 10px;">[警告] 該玩家在此局遊戲中未輸入任何防禦指令。</div>`;
+                    return;
+                }
+
+                logs.forEach(log => {
+                    terminal.innerHTML += `
+                        <div style="margin-bottom: 6px;">
+                            <span style="color: #888;">[剩餘 ${log.timer_left}s]</span> 
+                            <span style="color: #ffaa00;">[${log.time}]</span> 
+                            <span style="color: #00FF00; font-weight: bold;">root@sec-server:~# ${log.cmd}</span>
+                        </div>
+                    `;
+                });
+                
+                terminal.scrollTop = terminal.scrollHeight;
+                
+            } catch (e) {
+                terminal.innerHTML += `<div style="color: #ff4444;">[錯誤] 日誌資料解析失敗。</div>`;
+            }
+        }
+
+        // ==========================================
+        // 6. 動態題庫管理邏輯 (管理員專用)
+        // ==========================================
+        async function loadThreatsAdmin() {
+            try {
+                const response = await fetch('api/admin/manage_threats.php');
+                const result = await response.json();
+                
+                const tbody = document.getElementById('threat-table-body');
+                tbody.innerHTML = '';
+                
+                if (result.status === 'success') {
+                    if (result.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">目前沒有任何題庫資料</td></tr>';
+                        return;
+                    }
+
+                    result.data.forEach(item => {
+                        const tr = document.createElement('tr');
+                        const statusBadge = item.is_active == 1 
+                            ? '<span style="color: #00ff00; font-weight: bold;">啟用中</span>' 
+                            : '<span style="color: #888;">已停用</span>';
+
+                        tr.innerHTML = `
+                            <td>${item.ip_id}</td>
+                            <td><strong style="color: #00ebff;">${item.ip_address}</strong></td>
+                            <td><span class="badge badge-teacher">${item.attack_type.toUpperCase()}</span></td>
+                            <td style="color: #a7b8d6; font-size: 0.9em;">${item.payload_desc}</td>
+                            <td>${statusBadge}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (error) {
+                console.error("載入題庫失敗:", error);
+            }
+        }
+
+        async function handleAddNewThreat(event) {
+            event.preventDefault();
+
+            const ip_address = document.getElementById('new-ip').value.trim();
+            const attack_type = document.getElementById('new-type').value;
+            const payload_desc = document.getElementById('new-payload').value.trim();
+
+            try {
+                const response = await fetch('api/admin/manage_threats.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip_address, attack_type, payload_desc })
+                });
+
+                const result = await response.json();
+                alert(result.message);
+
+                if (result.status === 'success') {
+                    document.getElementById('add-threat-form').reset();
+                    loadThreatsAdmin();
+                }
+            } catch (error) {
+                alert("網路連線錯誤！");
+            }
+        }
+
+        // ==========================================
+        // 7. 系統登出
+        // ==========================================
+        async function handleLogout() {
+            if(!confirm("確定要登出系統嗎？")) return;
+            await fetch('api/logout.php', { method: 'POST' });
+            window.location.href = "login.html";
+        }
+    </script>
+</body>
+</html>

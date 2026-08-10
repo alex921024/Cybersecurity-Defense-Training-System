@@ -52,17 +52,34 @@ class GameManager {
         window.gameManagerInstance = this; 
     }
 
-    init(difficulty) {
+    // 將 init 改為 async 以支援 fetch 從資料庫讀取動態題庫
+    async init(difficulty) {
         document.getElementById('menu-screen').classList.remove('active');
         document.getElementById('game-screen').classList.add('active');
         document.getElementById('terminal-output').innerHTML = '';
         
+        // 1. 嘗試從後端資料庫載入動態題庫
+        try {
+            const response = await fetch('api/get_game_data.php');
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                GameDB.maliciousIPs = result.maliciousIPs;
+                GameDB.vipIPs = result.vipIPs;
+                GameDB.emails = result.emails;
+                console.log("✅ 成功從資料庫載入動態題庫！");
+            } else {
+                console.warn("⚠️ 無法載入後端題庫，將使用預設本地題庫。");
+            }
+        } catch (error) {
+            console.error("❌ 連線後端題庫 API 失敗，使用預設本地題庫:", error);
+        }
+
         this.difficultyConfig = GameDB.difficulties[difficulty];
         this.status = new SystemStatus();
         this.status.timer = this.difficultyConfig.time;
         this.activeThreat = null;
         
-        // 【新增】初始化操作日誌陣列
         this.actionLogs = []; 
         
         this.inbox = [];
@@ -749,7 +766,6 @@ class GameManager {
         const out = document.getElementById('terminal-output');
         if (!out) return;
         
-        // 【新增】如果是由玩家(user)發出的指令，記錄到 actionLogs 中
         if (type === "user") {
             if (!this.actionLogs) this.actionLogs = [];
             this.actionLogs.push({
@@ -766,7 +782,6 @@ class GameManager {
         if (type === 'alert' || type === 'danger') this.showNotification(msg, type === 'alert' ? 'danger' : 'danger');
     }
 
-    // 【更新】加上 async 以支援 fetch 非同步存檔
     async endGame(reason) {
         clearInterval(this.interval);
         const results = {
@@ -776,13 +791,10 @@ class GameManager {
             "FAILURE_OVERLOAD": { title: "⚠️ 任務失敗", desc: "防禦失敗：系統負載未能降至 75% 以下。", color: "#FFA500" }
         };
 
-        // 1. 計算存活時間與最終分數
         const maxTime = this.difficultyConfig ? this.difficultyConfig.time : 240;
         const survivalTime = maxTime - (this.status ? this.status.timer : 0);
-        // 簡單計分公式：存活秒數 * 10，若破關則額外加 1000 分
         const finalScore = (survivalTime * 10) + (reason === "SUCCESS" ? 1000 : 0);
 
-        // 2. 透過 API 儲存至資料庫
         try {
             await fetch('api/save_record.php', {
                 method: 'POST',
@@ -800,7 +812,6 @@ class GameManager {
             console.error("❌ 存檔失敗:", error);
         }
 
-        // 3. 顯示結算畫面
         setTimeout(() => {
             const titleEl = document.getElementById('game-over-title'); 
             if(titleEl) { titleEl.innerText = results[reason].title; titleEl.style.color = results[reason].color; }

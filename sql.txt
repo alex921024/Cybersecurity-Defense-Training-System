@@ -17,6 +17,9 @@ CREATE TABLE users (
     FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS teacher_id INT DEFAULT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved TINYINT(1) DEFAULT 1;
+
 -- 2. 已刪除帳號備份表 / 資源回收桶 (deleted_users_backup)
 CREATE TABLE deleted_users_backup (
     backup_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -95,3 +98,58 @@ CREATE TABLE phishing_emails (
     content TEXT NOT NULL,
     is_malicious BOOLEAN NOT NULL DEFAULT FALSE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+TRUNCATE TABLE difficulty_configs;
+INSERT INTO difficulty_configs (diff_id, total_time, attack_rates) VALUES 
+(0, 240, '{"syn": [1, 15], "udp": [16, 30], "dns": null, "icmp": null, "fishing": [31, 45], "none": [46, 100]}'),
+(1, 240, '{"syn": [1, 10], "udp": [11, 20], "dns": [21, 30], "icmp": null, "fishing": [31, 60], "none": [61, 100]}'),
+(2, 480, '{"syn": [1, 10], "udp": [11, 25], "dns": [26, 40], "icmp": [41, 55], "fishing": [56, 75], "none": [76, 100]}');
+
+
+-- 2. 匯入惡意 IP 題庫 (threat_ips)
+-- 對應原本 database.js 的 maliciousIPs 與 payloads.malicious
+TRUNCATE TABLE threat_ips;
+INSERT INTO threat_ips (ip_address, attack_type, payload_desc, is_active) VALUES 
+('103.24.55.12', 'syn', '[SYN] Seq=0 Win=64240 Len=0 MSS=1460 (Possible SYN Flood)', 1),
+('45.22.19.8', 'udp', '0x0000:  ff ff ff ff ff ff ff ff ... (Garbage Data / UDP Flood)', 1),
+('188.166.25.190', 'icmp', 'ICMP Echo Request (id=0x9999, seq=999, ttl=64) (Large Payload/Flood)', 1),
+('8.8.8.8', 'dns', 'DNS Standard query response 0xabcd ANY (Amplification Attack Payload, Size: 4096 bytes)', 1),
+('167.99.14.22', 'syn', '[SYN] Seq=0 Win=64240 Len=0 MSS=1460 (Possible SYN Flood)', 1);
+
+
+-- 3. 匯入 VIP 正常業務 IP / 誤殺地雷 (vip_ips)
+-- 對應原本 database.js 的 vipIPs
+TRUNCATE TABLE vip_ips;
+INSERT INTO vip_ips (ip_address, description) VALUES 
+('192.168.1.100', '內部核心資料庫主機 (切勿誤封鎖)'),
+('10.0.0.5', '辦公室網域閘道器'),
+('168.95.1.1', '外部網際網路 DNS 查詢節點');
+
+
+-- 4. 匯入郵件題庫 (phishing_emails)
+-- 包含正常業務郵件 (is_malicious = 0) 與惡意釣魚郵件 (is_malicious = 1)
+TRUNCATE TABLE phishing_emails;
+
+-- 【正常郵件】
+INSERT INTO phishing_emails (sender, subject, content, is_malicious) VALUES 
+('HR 部門', '本月出勤紀錄確認', '請同仁至差勤系統確認本月打卡紀錄是否有誤，若有請假未簽核請盡速處理。', 0),
+('IT Support', '系統例行維護通知', '伺服器將於本週五晚間進行系統升級，屆時內部網路將中斷 15 分鐘，請見諒。', 0),
+('總務處', '下午茶訂購統計', '各位同仁好，今天的下午茶是雞排配珍奶，請要訂購的同仁於下午兩點前至總務處登記。', 0),
+('系統自動通知', '[成功] DB-01 每日備份報告', '系統排程通知：\n昨晚的資料庫排程備份已成功完成，共計 45GB，無錯誤日誌產生。', 0),
+('行銷部_林專員', 'Q3 行銷活動企劃書初稿', '各位好，附件是下季度的企劃書草案，請大家在週三前提供修改建議，我們預計週五開會討論。', 0),
+('AWS Billing', 'Amazon Web Services Invoice Available', '您本月的 AWS 服務帳單已結算，總計 $450.00 USD，款項將於三日內從系統預設之信用卡扣除。', 0),
+('法務部', '員工保密協議 (NDA) 條款更新', '配合最新個資法規範，公司已更新內部保密協議。請同仁有空時至內網 EIP 系統詳閱新版條款。', 0),
+('研發部_張經理', '專案開發進度週報', '本週進度符合預期，前端 UI 已經完成 80%，後端 API 正在進行壓力測試，感謝各位的努力。', 0);
+
+-- 【惡意釣魚郵件】
+INSERT INTO phishing_emails (sender, subject, content, is_malicious) VALUES 
+('IT_Admin (外部)', '[警告] 您的網域密碼即將過期', '系統偵測到您的密碼將在 24 小時內過期。\n\n請立即點擊以下連結進行重置：\nhttp://sec-update-portal-login.com/reset\n\n若未完成，您的帳號將被永久凍結。', 1),
+('Apple_Support_Team', 'Apple ID 異常登入警告', '我們偵測到您的帳號在海外有異常登入嘗試。\n\n請回覆此郵件，並附上您的身分證件照片與原密碼以解鎖帳號。', 1),
+('財務部_王經理', 'RE: 2026年度財務報表 (機密)', '附件是今年的財務報表與員工薪資清單，請點擊連結下載查看：\nhttp://download-finance-report-2026.zip.exe \n\n請勿外流。', 1),
+('總經理 (CEO)', '急件！匯款指示 (人在外開會)', '我現在在外面與客戶開會，不方便接電話。\n\n請立刻幫我匯款 $15,000 美金到這個合作夥伴的帳戶，這是急件！匯款帳戶詳情請點擊下方連結確認：\nhttp://ceo-urgent-transfer-auth.com/doc', 1),
+('Microsoft 365 支援', '[重要] 您的信箱容量已滿', '您的企業信箱配額已達 99%。\n\n為避免無法收發客戶信件，請立即點擊此處升級您的儲存空間 (請注意網址拼字)：\nhttp://mircosoft-365-update.com/login', 1),
+('FedEx 快遞通知', '包裹投遞失敗通知 (追蹤碼: TW8831994)', '您的包裹因地址錯誤無法投遞。\n\n請下載附件的電子託運單 (Shipping_Label.pdf.exe) 確認正確地址，並重新安排配送時間。', 1),
+('人資部 (偽造)', '2026 年度調薪名單確認', '各位同仁好：\n附件是明年度的各部門調薪幅度與名單總表 (Salary_Adjustment_2026.xlsx.vbs)。\n請各主管下載後輸入員工編號確認是否有誤。', 1),
+('網路管理中心', 'VPN 憑證更新通知 (強制執行)', '因應近期資安威脅，公司 VPN 憑證已全面更新。\n\n請同仁務必於今日下班前點擊連結下載並安裝新版憑證，否則明日將無法連線至公司內網：\nhttp://vpn-cert-update-portal.net/download', 1);

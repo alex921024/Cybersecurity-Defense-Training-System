@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資安防禦訓練系統 - 終端登入</title>
+    <!-- 引入獨立的 CSS 樣式表 -->
+    <link rel="stylesheet" href="login.css">
+</head>
+<body>
+
+<div class="container">
+    <!-- 左側：系統介紹 -->
+    <div class="intro-section">
+        <h1>SOC 資安防禦訓練系統</h1>
+        <p>歡迎進入藍隊戰術模擬終端。本系統專為資安工程師打造，提供高擬真度的網路防禦實戰環境。</p>
+        <p>在這裡，您將面臨 DDoS 洪水攻擊、DNS 放大攻擊以及社交工程釣魚等即時威脅。請運用 Wireshark 流量監控與防火牆策略，守護伺服器資源。</p>
+        <div class="system-specs">
+            <div>> 系統狀態：<span class="status-online">在線 (ONLINE)</span></div>
+            <div>> 核心協定：TCP / UDP / ICMP / DNS</div>
+            <div>> 授權級別：需進行身分驗證</div>
+        </div>
+    </div>
+
+    <!-- 右側：登入與註冊表單 -->
+    <div class="auth-section">
+        <div class="tab-headers">
+            <button class="tab-btn active" onclick="switchTab('login')">系統登入</button>
+            <button class="tab-btn" onclick="switchTab('register')">註冊帳號</button>
+        </div>
+
+        <!-- 登入表單 -->
+        <form id="loginForm" class="auth-form active" onsubmit="handleLogin(event)">
+            <div class="input-group">
+                <label>> 帳號 (Username)</label>
+                <input type="text" id="login_username" required placeholder="請輸入學號或員編">
+            </div>
+            <div class="input-group">
+                <label>> 密碼 (Password)</label>
+                <input type="password" id="login_password" required placeholder="請輸入密碼">
+            </div>
+            <div id="login_error" class="error-msg"></div>
+            <button type="submit" class="submit-btn">認證並登入</button>
+        </form>
+
+        <!-- 註冊表單 -->
+        <form id="registerForm" class="auth-form" onsubmit="handleRegister(event)">
+            <div class="input-group">
+                <label>> 帳號 (Username)</label>
+                <input type="text" id="reg_username" required placeholder="設定您的學號或員編">
+            </div>
+            <div class="input-group">
+                <label>> 密碼 (Password)</label>
+                <input type="password" id="reg_password" required placeholder="設定高強度密碼">
+            </div>
+            <div class="input-group">
+                <label>> 確認密碼 (Confirm Password)</label>
+                <input type="password" id="reg_confirm_password" required placeholder="請再次輸入密碼以確認">
+            </div>
+            <div id="reg_error" class="error-msg"></div>
+            <button type="submit" class="submit-btn register-btn">建立終端授權</button>
+        </form>
+    </div>
+</div>
+
+<!-- 引入獨立的 JavaScript 邏輯 -->
+<script src="auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOC 訓練中心 - 學員專區</title>
+    <link rel="stylesheet" href="student_dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>學員控制中心</h2>
+            <div class="user-info">
+                學員帳號: <span id="display-username" style="color: #00ebff;">載入中...</span><br>
+                指導老師: <span id="display-teacher" style="color: #ffaa00;">未綁定</span>
+            </div>
+        </div>
+        <nav class="menu">
+            <button class="menu-btn active"><i class="fas fa-history"></i> 我的歷史紀錄</button>
+            <button class="menu-btn" onclick="window.location.href='index.html'"><i class="fas fa-gamepad"></i> 開始資安訓練</button>
+        </nav>
+        <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> 安全登出</button>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <h2><i class="fas fa-chart-line"></i> 個人訓練成效與導師綁定</h2>
+        </header>
+        <section class="content-area">
+            <!-- 導師綁定區塊 -->
+            <div class="panel" style="margin-bottom: 20px;">
+                <h3>導師管理申請</h3>
+                <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+                    <input type="text" id="teacher-input" placeholder="請輸入教師帳號名稱 (例如: TEACHER)" style="padding: 8px; width: 300px; background: #050b14; border: 1px solid #1f2c3a; color: #fff; border-radius: 4px;">
+                    <button onclick="applyTeacher()" style="padding: 8px 15px; background: #00ebff; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">送出綁定申請</button>
+                </div>
+                <p id="teacher-status-text" style="font-size: 0.9em; color: #a7b8d6; margin-top: 8px;"></p>
+            </div>
+
+            <div class="panel">
+                <h3>歷史挑戰明細</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>挑戰時間</th>
+                            <th>難度等級</th>
+                            <th>存活時間</th>
+                            <th>最終得分</th>
+                            <th>結局狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="my-records-body">
+                        <tr><td colspan="5" style="text-align: center;">資料載入中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            await checkAuth();
+            await loadMyRecords();
+        });
+
+        async function checkAuth() {
+            try {
+                const response = await fetch('api/check_auth.php');
+                const data = await response.json();
+                
+                if (data.status !== "success" || data.role !== "student") {
+                    alert("權限不足或未登入！");
+                    window.location.href = "login.html";
+                    return;
+                }
+                document.getElementById('display-username').innerText = data.username;
+            } catch (error) {
+                window.location.href = "login.html";
+            }
+        }
+
+        async function loadMyRecords() {
+            try {
+                const response = await fetch('api/get_my_records.php');
+                const result = await response.json();
+                
+                const tbody = document.getElementById('my-records-body');
+                tbody.innerHTML = '';
+                
+                if (result.status === 'success') {
+                    // 顯示老師與審核狀態
+                    if (result.teacher_name) {
+                        let statusStr = result.is_approved == 1 ? " (已核准)" : " (審核中...)";
+                        document.getElementById('display-teacher').innerText = result.teacher_name + statusStr;
+                    }
+
+                    if (result.data.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">目前尚無任何遊玩紀錄</td></tr>';
+                        return;
+                    }
+
+                    result.data.forEach(record => {
+                        const tr = document.createElement('tr');
+                        let diffText = record.difficulty == 0 ? '簡單' : record.difficulty == 1 ? '普通' : '困難';
+                        let reasonColor = record.end_reason === 'SUCCESS' ? '#00ff00' : '#ff4444';
+
+                        tr.innerHTML = `
+                            <td>${record.played_at}</td>
+                            <td>LV.${diffText}</td>
+                            <td>${record.survival_time} 秒</td>
+                            <td><strong style="color: #00ebff;">${record.final_score} 分</strong></td>
+                            <td><span style="color: ${reasonColor}; font-weight: bold;">${record.end_reason}</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            } catch (error) {
+                console.error("載入紀錄失敗:", error);
+            }
+        }
+
+        async function applyTeacher() {
+            const teacherUsername = document.getElementById('teacher-input').value.trim();
+            if (!teacherUsername) {
+                alert("請輸入教師帳號！");
+                return;
+            }
+
+            try {
+                const response = await fetch('api/apply_teacher.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ teacher_username: teacherUsername })
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') {
+                    location.reload();
+                }
+            } catch (error) {
+                alert("網路連線錯誤！");
+            }
+        }
+
+        async function handleLogout() {
+            if(!confirm("確定要登出系統嗎？")) return;
+            try {
+                await fetch('api/logout.php', { method: 'POST' });
+                window.location.href = "login.html";
+            } catch (error) {
+                console.error("登出失敗:", error);
+            }
+        }
+    </script>
+</body>
+</html>
