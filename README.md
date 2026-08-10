@@ -26,15 +26,44 @@
 
 ## 🚀 快速開始
 
-由於專案採用 Vanilla JavaScript 撰寫，無需安裝任何依賴套件：
+本專案包含 PHP 驗證頁面與 MySQL 資料庫，請使用本機 Web 伺服器來啟動：
 
 1.  **複製專案**：
     ```bash
     git clone https://github.com/your-username/security-defense-trainer.git
     ```
-2.  **執行遊戲**：
-    請先開啟 `login.html` 進行登入，登入後會由系統導向訓練頁面 `index.php`。
-    *(建議使用 VS Code Live Server 擴充功能以獲得最佳體驗)*
+2.  **建立資料庫**：
+    1. 開啟 MySQL 或 MariaDB，建立資料庫 `soc_training_db`。
+    2. 匯入本專案根目錄中的 `sql.txt`：
+       - 使用 MySQL CLI：
+         ```bash
+         mysql -u root -p < sql.txt
+         ```
+       - 或使用 phpMyAdmin / Workbench 匯入 SQL 檔案。
+    3. 若需要，請編輯 `api/db_connect.php` 以修改 `host`、`user`、`pass` 和資料庫名稱。
+3.  **啟動本機伺服器**：
+    - 建議使用 PHP 內建伺服器：
+      ```bash
+      php -S localhost:8000
+      ```
+    - 或使用 XAMPP / WAMP / VS Code Live Server，將本專案根目錄當成 Web 根目錄。
+4.  **登入遊戲**：
+    打開 `login.html` 進行登入，登入成功後系統會導向受保護的訓練頁面 `index.php`。
+    *(若直接開啟 `index.html`，系統會自動轉向 `login.html`。)*
+
+-----
+
+## 🔐 新增內容與安全強化
+
+以下為本次專案更新後的重要變更：
+
+  * `index.php`：已改為受保護遊戲頁面，使用 PHP session 驗證，未登入者會自動轉向 `login.html`。
+  * `index.html`：改為未登入時的入口頁面，直接開啟會轉向 `login.html`，避免繞過伺服器驗證。
+  * `api/common.php`：新增共用後端工具，提供 `requireAuth()`、`requirePost()`、`requireGet()`、JSON 解析與帳號驗證。
+  * `api/check_auth.php`：驗證使用者登入狀態並回傳 `user_id`、`username`、`role`。
+  * `student_dashboard.html`：已更新「開始資安訓練」按鈕，改為導向 `index.php`。
+  * `api/db_connect.php`：採用 PDO 連線 MySQL，並啟用 `utf8mb4` 編碼與例外錯誤模式。
+  * 後端 API 現在強制使用正確 HTTP 方法，並以 session 驗證與角色檢查保護資源存取。
 
 -----
 
