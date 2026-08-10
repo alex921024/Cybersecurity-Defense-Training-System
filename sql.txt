@@ -1,4 +1,4 @@
--- 建立資料庫 (若尚未建立的話可取消註解)
+-- 建立資料庫 
 -- CREATE DATABASE IF NOT EXISTS soc_training_db DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- USE soc_training_db;
 
