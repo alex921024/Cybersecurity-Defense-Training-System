@@ -25,7 +25,7 @@ header('Content-Type: text/html; charset=utf-8');
         <h1>資安防禦訓練系統</h1>
         <div id="entry-content" class="menu-options">
             <button onclick="toggleDifficultySelect()">開 始</button>
-            <button onclick="location.href='tutorial.php'">教 學</button>
+            <button onclick="location.href='teaching/tutorial.php'">教 學</button>
             <button onclick="toggleSettings()">設定</button>
         </div>
         <div id="difficulty-content" class="menu-options hidden">

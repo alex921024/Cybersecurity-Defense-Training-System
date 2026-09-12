@@ -1,11 +1,11 @@
 <?php
-require_once 'api/common.php';
+require_once '../api/common.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.html');
+    header('Location: ../login.html');
     exit;
 }
 header('Content-Type: text/html; charset=utf-8');
@@ -16,7 +16,7 @@ header('Content-Type: text/html; charset=utf-8');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>資安防禦訓練 - 教學控制中心</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
@@ -45,7 +45,7 @@ header('Content-Type: text/html; charset=utf-8');
 </head>
 <body>
     <!-- 頂層教學控制大腦對話框 -->
-    <div class="tutorial-overlay">
+    <div class="../tutorial-overlay">
         <h2 id="tutorial-title" style="color: #00FF00; margin-top: 0;">載入中...</h2>
         <p id="tutorial-desc" style="color: #fff; min-height: 60px; line-height: 1.6;"></p>
         <div style="text-align: right; margin-top: 15px;">
@@ -378,7 +378,7 @@ header('Content-Type: text/html; charset=utf-8');
                 currentStep++;
                 updateUI();
             } else {
-                location.href = 'index.php';
+                location.href = '../index.php';
             }
         }
 
