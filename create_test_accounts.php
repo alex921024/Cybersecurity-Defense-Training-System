@@ -43,14 +43,13 @@ try {
     echo "<li><strong>[教師權限]</strong> 帳號: <code>TEACHER</code> | 密碼: <code>TEACHER1024</code></li>";
     echo "<li><strong>[管理員權限]</strong> 帳號: <code>ALEX1024</code> | 密碼: <code>Aa0988709314</code></li>";
     echo "</ul>";
-    echo "<p>👉 現在您可以回到 <a href='login.html' style='color: #00ebff;'>login.html</a> 進行登入測試了！</p>";
-    echo "<p style='color: #ff4444;'>⚠️ 提示：為確保安全，測試完成後建議將此檔案 (create_test_accounts.php) 從資料夾中刪除。</p>";
+    echo "<p>現在您可以回到 <a href='login.html' style='color: #00ebff;'>login.html</a> 進行登入測試了！</p>";
+    echo "<p style='color: #ff4444;'> 提示：為確保安全，測試完成後建議將此檔案 (create_test_accounts.php) 從資料夾中刪除。</p>";
     echo "</div>";
 
 } catch (PDOException $e) {
-    // 捕捉可能發生的錯誤 (例如帳號已存在)
     echo "<div style='font-family: monospace; background: #111; color: #ff4444; padding: 20px;'>";
-    echo "<h2>❌ 建立失敗</h2>";
+    echo "<h2> 建立失敗</h2>";
     echo "<p>錯誤訊息：" . $e->getMessage() . "</p>";
     echo "</div>";
 }
