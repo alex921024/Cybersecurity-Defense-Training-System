@@ -1,7 +1,7 @@
 <?php
 // api/apply_teacher.php
-require_once 'common.php';
-require_once 'db_connect.php';
+require_once dirname(__DIR__) . '/core/common.php';
+require_once dirname(__DIR__) . '/core/db_connect.php';
 
 requirePost();
 $session = requireAuth('student');

@@ -1,7 +1,7 @@
 <?php
 header('Content-Type: text/html; charset=utf-8');
 
-require_once 'api/db_connect.php';
+require_once __DIR__ . '/api/core/db_connect.php';
 
 try {
     

@@ -1,6 +1,6 @@
 <?php
 // api/logout.php
-require_once 'common.php';
+require_once dirname(__DIR__) . '/core/common.php';
 
 requirePost();
 session_start();

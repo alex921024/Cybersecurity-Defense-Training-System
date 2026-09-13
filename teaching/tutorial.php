@@ -1,5 +1,5 @@
 <?php
-require_once '../api/common.php';
+require_once dirname(__DIR__) . '/api/core/common.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();

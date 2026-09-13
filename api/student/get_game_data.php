@@ -1,7 +1,7 @@
 <?php
 // api/get_game_data.php
-require_once 'common.php';
-require_once 'db_connect.php';
+require_once dirname(__DIR__) . '/core/common.php';
+require_once dirname(__DIR__) . '/core/db_connect.php';
 
 requireGet();
 
@@ -50,7 +50,7 @@ try {
 ?>        
         // 1. 嘗試從後端資料庫載入動態題庫
         try {
-            const response = await fetch('api/get_game_data.php');
+            const response = await fetch('api/student/get_game_data.php');
             const result = await response.json();
             
             if (result.status === 'success') {
@@ -786,7 +786,7 @@ try {
         const finalScore = (survivalTime * 10) + (reason === "SUCCESS" ? 1000 : 0);
 
         try {
-            await fetch('api/save_record.php', {
+            await fetch('api/student/save_record.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

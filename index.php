@@ -1,5 +1,5 @@
 <?php
-require_once 'api/common.php';
+require_once __DIR__ . '/api/core/common.php';
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
@@ -251,7 +251,7 @@ header('Content-Type: text/html; charset=utf-8');
     <script>
         async function verifyLogin() {
             try {
-                const response = await fetch('api/check_auth.php', { method: 'GET' });
+                const response = await fetch('api/auth/check_auth.php', { method: 'GET' });
                 const data = await response.json();
                 if (data.status !== 'success') {
                     window.location.href = 'login.html';
