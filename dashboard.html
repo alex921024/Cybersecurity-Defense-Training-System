@@ -202,7 +202,7 @@
         // ==========================================
         async function checkAuth() {
             try {
-                const response = await fetch('api/auth/check_auth.php');
+                const response = await fetch('api/check_auth.php');
                 const data = await response.json();
                 
                 if (data.status !== "success" || data.role === "student") {
@@ -229,7 +229,7 @@
         // ==========================================
         async function loadUserList() {
             try {
-                const response = await fetch('api/users/get_users.php');
+                const response = await fetch('api/get_users.php');
                 const result = await response.json();
                 if (result.status === 'success') {
                     renderTable(result.data);
@@ -309,7 +309,7 @@
             if (!confirm(confirmMsg[actionType])) return;
 
             try {
-                const response = await fetch('api/users/update_user.php', {
+                const response = await fetch('api/update_user.php', {
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ user_id: targetUserId, action: actionType }) 
@@ -331,7 +331,7 @@
             if (!confirm(msg)) return;
 
             try {
-                const response = await fetch('api/users/approve_student.php', {
+                const response = await fetch('api/approve_student.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ student_id: targetUserId, action: actionType })
@@ -356,7 +356,7 @@
 
         async function loadAnalytics(studentId = null, studentName = null) {
             try {
-                let apiUrl = 'api/game/get_records.php';
+                let apiUrl = 'api/get_records.php';
                 if (studentId) {
                     apiUrl += `?student_id=${studentId}`;
                 }
@@ -429,7 +429,7 @@
         // ==========================================
         async function loadActionLogs() {
             try {
-                    const response = await fetch('api/game/get_records.php');
+                    const response = await fetch('api/get_records.php');
                 const result = await response.json();
                 
                 const tbody = document.getElementById('logs-table-body');
@@ -567,7 +567,7 @@
         // ==========================================
         async function handleLogout() {
             if(!confirm("確定要登出系統嗎？")) return;
-            await fetch('api/auth/logout.php', { method: 'POST' });
+            await fetch('api/logout.php', { method: 'POST' });
             window.location.href = "login.html";
         }
     </script>

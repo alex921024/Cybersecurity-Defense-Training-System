@@ -2,7 +2,7 @@
 // api/admin/manage_threats.php
 session_start();
 header('Content-Type: application/json; charset=utf-8');
-require_once '../core/db_connect.php';
+require_once '../api/db_connect.php';
 
 // 1. 安全攔檢查：必須登入且身分為 admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {

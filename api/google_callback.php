@@ -1,9 +1,9 @@
 <?php
-require_once '../core/common.php';
-require_once '../core/db_connect.php';
+require_once 'common.php';
+require_once 'db_connect.php';
 
 function googleFail($message) {
-    header('Location: ../../login.html?google_error=' . rawurlencode($message));
+    header('Location: ../login.html?google_error=' . rawurlencode($message));
     exit;
 }
 
@@ -98,7 +98,7 @@ try {
     $log = $pdo->prepare('INSERT INTO account_operation_logs (operator_id, action_type, target_username, ip_address, device_info, details) VALUES (?, ?, ?, ?, ?, ?)');
     $log->execute([$user['user_id'], $action, $user['username'], $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN', $_SERVER['HTTP_USER_AGENT'] ?? 'UNKNOWN', json_encode(['email' => $email], JSON_UNESCAPED_UNICODE)]);
 
-    header('Location: ../../' . ($user['role'] === 'student' ? 'student_dashboard.html' : 'dashboard.html'));
+    header('Location: ../' . ($user['role'] === 'student' ? 'student_dashboard.html' : 'dashboard.html'));
     exit;
 } catch (PDOException $e) {
     googleFail('Google 登入時資料庫發生錯誤');

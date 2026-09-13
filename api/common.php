@@ -1,9 +1,10 @@
 <?php
-// api/core/common.php
+// api/common.php
 header('Content-Type: application/json; charset=utf-8');
 
 ini_set('session.use_strict_mode', 1);
 ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_path', '/');
 // Lax allows the top-level GET callback from Google OAuth to keep the session.
 ini_set('session.cookie_samesite', 'Lax');
 if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {

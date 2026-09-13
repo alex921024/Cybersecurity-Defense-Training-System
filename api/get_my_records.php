@@ -1,7 +1,7 @@
 <?php
-// api/game/get_my_records.php
-require_once '../core/common.php';
-require_once '../core/db_connect.php';
+// api/get_my_records.php
+require_once 'common.php';
+require_once 'db_connect.php';
 
 requireGet();
 $session = requireAuth('student');

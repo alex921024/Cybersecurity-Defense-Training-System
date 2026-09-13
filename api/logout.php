@@ -1,6 +1,6 @@
 <?php
-// api/auth/logout.php
-require_once '../core/common.php';
+// api/logout.php
+require_once 'common.php';
 
 requirePost();
 session_start();

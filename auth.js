@@ -66,7 +66,7 @@ async function handleRegister(e) {
     
     try {
         // 透過 fetch API 發送 POST 請求到後端
-        const response = await fetch('api/auth/register.php', {
+        const response = await fetch('api/register.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -127,7 +127,7 @@ async function handleLogin(e) {
     errorMsg.innerText = "🔄 驗證憑證中...";
 
     try {
-        const response = await fetch('api/auth/login.php', {
+        const response = await fetch('api/login.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

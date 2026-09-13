@@ -40,7 +40,7 @@
          mysql -u root -p < sql.txt
          ```
        - 或使用 phpMyAdmin / Workbench 匯入 SQL 檔案。
-    3. 若需要，請編輯 `api/core/db_connect.php` 以修改 `host`、`user`、`pass` 和資料庫名稱。
+    3. 若需要，請編輯 `api/db_connect.php` 以修改 `host`、`user`、`pass` 和資料庫名稱。
 3.  **啟動本機伺服器**：
     - 建議使用 PHP 內建伺服器：
       ```bash
@@ -56,7 +56,7 @@
   請在 Google Cloud Console 的 OAuth 用戶端加入以下「已授權的重新導向 URI」：
 
   ```text
-  http://localhost/Cybersecurity-Defense-Training-System/api/auth/google_callback.php
+  http://localhost/Cybersecurity-Defense-Training-System/api/google_callback.php
   ```
 
   系統會從根目錄的 `OAuth 2.0  ID.txt` 讀取 Client ID 與 Client Secret；正式環境建議改用 `GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET` 與 `GOOGLE_REDIRECT_URI` 環境變數。首次使用 Google 登入會自動建立 `student` 帳號。
@@ -71,10 +71,10 @@
 
   * `index.php`：已改為受保護遊戲頁面，使用 PHP session 驗證，未登入者會自動轉向 `login.html`。
   * `index.html`：改為未登入時的入口頁面，直接開啟會轉向 `login.html`，避免繞過伺服器驗證。
-  * `api/core/common.php`：共用後端工具，提供 `requireAuth()`、`requirePost()`、`requireGet()`、JSON 解析與帳號驗證。
-  * `api/auth/check_auth.php`：驗證使用者登入狀態並回傳 `user_id`、`username`、`role`。
+  * `api/common.php`：共用後端工具，提供 `requireAuth()`、`requirePost()`、`requireGet()`、JSON 解析與帳號驗證。
+  * `api/check_auth.php`：驗證使用者登入狀態並回傳 `user_id`、`username`、`role`。
   * `student_dashboard.html`：已更新「開始資安訓練」按鈕，改為導向 `index.php`。
-  * `api/core/db_connect.php`：採用 PDO 連線 MySQL，並啟用 `utf8mb4` 編碼與例外錯誤模式。
+  * `api/db_connect.php`：採用 PDO 連線 MySQL，並啟用 `utf8mb4` 編碼與例外錯誤模式。
   * 後端 API 現在強制使用正確 HTTP 方法，並以 session 驗證與角色檢查保護資源存取。
 
 -----

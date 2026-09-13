@@ -1,6 +1,6 @@
 <?php
-// api/auth/check_auth.php
-require_once '../core/common.php';
+// api/check_auth.php
+require_once 'common.php';
 
 requireGet();
 $session = requireAuth();
