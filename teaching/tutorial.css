@@ -6,17 +6,18 @@
     transform: translateX(-50%);
     z-index: 9999;
     width: 600px;
-    background: rgba(0, 15, 0, 0.95);
-    border: 2px solid #00FF00;
-    box-shadow: 0 0 25px rgba(0, 255, 0, 0.5);
+    background: rgba(13, 17, 23, 0.97);
+    border: 2px solid #58a6ff;
+    box-shadow: 0 0 25px rgba(88, 166, 255, 0.35);
     padding: 20px;
     border-radius: 8px;
-    font-family: monospace;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    color: #f0f6fc;
 }
 
 /* 教學閃爍特效 */
 .tutorial-highlight {
-    outline: 3px solid #ff0055 !important;
-    box-shadow: 0 0 30px #ff0055 !important;
+    outline: 3px solid #58a6ff !important;
+    box-shadow: 0 0 30px rgba(88, 166, 255, 0.6) !important;
     transition: all 0.3s ease;
 }

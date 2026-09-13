@@ -1,7 +1,7 @@
 <?php
-// api/get_users.php
-require_once 'common.php';
-require_once 'db_connect.php';
+// api/users/get_users.php
+require_once '../core/common.php';
+require_once '../core/db_connect.php';
 
 requireGet();
 $session = requireAuth(['admin', 'teacher']);

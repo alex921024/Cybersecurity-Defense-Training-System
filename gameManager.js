@@ -784,7 +784,7 @@ class GameManager {
 
         // 2. 透過 API 儲存至資料庫
         try {
-            await fetch('api/save_record.php', {
+            await fetch('api/game/save_record.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

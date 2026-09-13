@@ -2,7 +2,7 @@
 // api/admin/manage_threats.php
 session_start();
 header('Content-Type: application/json; charset=utf-8');
-require_once '../db_connect.php'; // 注意路徑：因為在 admin 子資料夾內，需退回上一層
+require_once '../core/db_connect.php';
 
 // 1. 安全攔檢查：必須登入且身分為 admin
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {

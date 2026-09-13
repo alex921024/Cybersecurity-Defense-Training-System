@@ -1,7 +1,7 @@
 <?php
-// api/approve_student.php
-require_once 'common.php';
-require_once 'db_connect.php';
+// api/users/approve_student.php
+require_once '../core/common.php';
+require_once '../core/db_connect.php';
 
 requirePost();
 $session = requireAuth('teacher');

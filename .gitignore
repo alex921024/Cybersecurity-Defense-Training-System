@@ -1,0 +1,7 @@
+# OAuth credentials
+OAuth 2.0  ID.txt
+
+# Local environment files
+.env
+.env.*
+!.env.example

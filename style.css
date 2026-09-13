@@ -2,13 +2,15 @@
    1. 全域設定與變數 (Variables & Base)
 ========================================= */
 :root {
-    --bg-color: #0a0a0a;
-    --sidebar-color: #151515;
-    --terminal-green: #00FF00;
-    --warning-orange: #FFA500;
-    --danger-red: #d93025;
-    --border-color: #333;
-    --win11-blue: #00ebff;
+    --bg-color: #0d1117;
+    --sidebar-color: #161b22;
+    --terminal-green: #2ea043;
+    --warning-orange: #d29922;
+    --danger-red: #f85149;
+    --border-color: #30363d;
+    --win11-blue: #58a6ff;
+    --panel-color: #0d1117;
+    --muted-text: #8b949e;
 }
 
 body, html {
@@ -983,3 +985,25 @@ body, html {
     display: block;
     font-size: 0.95em;
 }
+
+/* Shared login palette overrides */
+body, html { background-color: var(--bg-color); color: #f0f6fc; }
+#game-sidebar, .sidebar-header { background: var(--sidebar-color); border-color: var(--border-color); }
+.tab-btn:hover { color: #f0f6fc; background: #21262d; }
+.tab-btn.active { color: var(--win11-blue); background: #21262d; border-left-color: var(--win11-blue); }
+#tab-content-container { background: #0d1117; }
+.mission-panel, .panel, .mail-viewer, .intel-group { background: #161b22; border-color: var(--border-color); color: #f0f6fc; }
+.mission-label, #attack-type-title, .intel-group-title { color: var(--win11-blue); }
+.mission-tip, .radar-step, .mail-viewer, .manual-table td { color: var(--muted-text); }
+.mission-step, .radar-step { background: #21262d; border-color: var(--border-color); }
+.active-step, .radar-step.active { background: #1f6feb33; border-color: var(--win11-blue); color: #f0f6fc; }
+.manual-table { background: #161b22; }
+.manual-table th { background: #21262d; color: var(--win11-blue); border-color: var(--border-color); }
+.manual-table td { border-color: var(--border-color); }
+.btn-click, .btn-bind { background: var(--win11-blue); }
+.btn-delete, .game-toast.danger, .mail-warning { color: var(--danger-red) !important; }
+.game-toast { background: rgba(13, 17, 23, 0.92); }
+.game-toast.success { border-left-color: var(--terminal-green); color: var(--terminal-green); text-shadow: none; }
+.intel-tag { background: rgba(248, 81, 73, 0.1); color: var(--danger-red); border-color: var(--danger-red); }
+.intel-tag:hover { background: var(--danger-red); }
+.intel-tag.blocked { background: rgba(46, 160, 67, 0.12); color: var(--terminal-green); border-color: var(--terminal-green); }
