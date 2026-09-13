@@ -1,5 +1,7 @@
 # OAuth credentials
 OAuth 2.0  ID.txt
+agents
+cybersecurity-trainer.agent.md
 
 # Local environment files
 .env
