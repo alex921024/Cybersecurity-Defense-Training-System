@@ -19,7 +19,7 @@
         </div>
         <nav class="menu">
             <button class="menu-btn active"><i class="fas fa-history"></i> 我的歷史紀錄</button>
-            <button class="menu-btn" onclick="window.location.href='index.php'"><i class="fas fa-gamepad"></i> 開始資安訓練</button>
+            <button class="menu-btn" onclick="window.location.href='../../index.php'"><i class="fas fa-gamepad"></i> 開始資安訓練</button>
         </nav>
         <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> 安全登出</button>
     </aside>
@@ -67,7 +67,7 @@
 
         async function checkAuth() {
             try {
-                const response = await fetch('api/auth/check_auth.php');
+                const response = await fetch('../../api/auth/check_auth.php');
                 const data = await response.json();
                 
                 if (data.status !== "success" || data.role !== "student") {
@@ -83,7 +83,7 @@
 
         async function loadMyRecords() {
             try {
-                const response = await fetch('api/student/get_my_records.php');
+                const response = await fetch('../../api/student/get_my_records.php');
                 const result = await response.json();
                 
                 const tbody = document.getElementById('my-records-body');
@@ -129,7 +129,7 @@
             }
 
             try {
-                const response = await fetch('api/student/apply_teacher.php', {
+                const response = await fetch('../../api/student/apply_teacher.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ teacher_username: teacherUsername })
@@ -147,7 +147,7 @@
         async function handleLogout() {
             if(!confirm("確定要登出系統嗎？")) return;
             try {
-                await fetch('api/auth/logout.php', { method: 'POST' });
+                await fetch('../../api/auth/logout.php', { method: 'POST' });
                 window.location.href = "login.html";
             } catch (error) {
                 console.error("登出失敗:", error);

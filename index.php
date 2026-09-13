@@ -5,7 +5,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 if (!isset($_SESSION['user_id'])) {
-    header('Location: login.html');
+    header('Location: assets/html/login.html');
     exit;
 }
 header('Content-Type: text/html; charset=utf-8');
@@ -26,7 +26,7 @@ header('Content-Type: text/html; charset=utf-8');
         <div id="entry-content" class="menu-options">
             <button onclick="toggleDifficultySelect()">開 始</button>
             <button onclick="location.href='teaching/tutorial.php'">教 學</button>
-            <button onclick="location.href='student_dashboard.html'">返回控制台</button>
+            <button onclick="location.href='assets/html/student_dashboard.html'">返回控制台</button>
             <button onclick="toggleSettings()">設定</button>
         </div>
         <div id="difficulty-content" class="menu-options hidden">
@@ -254,10 +254,10 @@ header('Content-Type: text/html; charset=utf-8');
                 const response = await fetch('api/auth/check_auth.php', { method: 'GET' });
                 const data = await response.json();
                 if (data.status !== 'success') {
-                    window.location.href = 'login.html';
+                    window.location.href = 'assets/html/login.html';
                 }
             } catch (error) {
-                window.location.href = 'login.html';
+                window.location.href = 'assets/html/login.html';
             }
         }
         document.addEventListener('DOMContentLoaded', verifyLogin);
