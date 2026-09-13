@@ -1,0 +1,23 @@
+/* 教學浮動對話框樣式 */
+.tutorial-overlay {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    width: 600px;
+    background: rgba(13, 17, 23, 0.97);
+    border: 2px solid #58a6ff;
+    box-shadow: 0 0 25px rgba(88, 166, 255, 0.35);
+    padding: 20px;
+    border-radius: 8px;
+    font-family: 'Trebuchet MS', Arial, sans-serif;
+    color: #f0f6fc;
+}
+
+/* 教學閃爍特效 */
+.tutorial-highlight {
+    outline: 3px solid #58a6ff !important;
+    box-shadow: 0 0 30px rgba(88, 166, 255, 0.6) !important;
+    transition: all 0.3s ease;
+}

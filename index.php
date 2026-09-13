@@ -16,7 +16,7 @@ header('Content-Type: text/html; charset=utf-8');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>資安防禦訓練系統 - 終端監控中心</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="assets/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -262,9 +262,9 @@ header('Content-Type: text/html; charset=utf-8');
         }
         document.addEventListener('DOMContentLoaded', verifyLogin);
     </script>
-    <script src="threatRadar.js"></script>
+    <script src="assets/js/threatRadar.js"></script>
     <script type="module">
-        import GameManager from './gameManager.js';
+        import GameManager from './assets/js/gameManager.js';
         window.gameManagerInstance = new GameManager();
         window.selectedDifficulty = 0;
 

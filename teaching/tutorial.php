@@ -5,7 +5,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 if (!isset($_SESSION['user_id'])) {
-    header('Location: ../login.html');
+    header('Location: ../assets/html/login.html');
     exit;
 }
 header('Content-Type: text/html; charset=utf-8');
@@ -16,8 +16,8 @@ header('Content-Type: text/html; charset=utf-8');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>資安防禦訓練 - 教學控制中心</title>
-    <link rel="stylesheet" href="../style.css">
-    <link rel="stylesheet" href="tutorial.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link rel="stylesheet" href="./tutorial.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -41,7 +41,7 @@ header('Content-Type: text/html; charset=utf-8');
                 <button id="menu-tab-mailbox" class="tab-btn" onclick="switchTutorialTab('tab-mailbox')">📧 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">1</span></button>
                 <button id="menu-tab-manual" class="tab-btn" onclick="switchTutorialTab('tab-manual')">📘 指令手冊</button>
             </nav>
-            <button class="quit-btn" onclick="location.href='index.php'">結束教學</button>
+            <button class="quit-btn" onclick="location.href='../index.php'">結束教學</button>
         </aside>
 
         <main id="tab-content-container">
@@ -230,6 +230,6 @@ header('Content-Type: text/html; charset=utf-8');
     </div>
 
     <!-- 教學控制腳本 -->
-    <script src="tutorial.js"></script>
+    <script src="./tutorial.js"></script>
 </body>
 </html>
