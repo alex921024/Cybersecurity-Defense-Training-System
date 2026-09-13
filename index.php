@@ -26,6 +26,7 @@ header('Content-Type: text/html; charset=utf-8');
         <div id="entry-content" class="menu-options">
             <button onclick="toggleDifficultySelect()">開 始</button>
             <button onclick="location.href='teaching/tutorial.php'">教 學</button>
+            <button onclick="location.href='student_dashboard.html'">返回控制台</button>
             <button onclick="toggleSettings()">設定</button>
         </div>
         <div id="difficulty-content" class="menu-options hidden">
