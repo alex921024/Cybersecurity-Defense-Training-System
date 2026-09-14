@@ -1,4 +1,4 @@
-class ThreatRadar {
+window.ThreatRadar = class ThreatRadar {
     constructor() {
         this.container = null;
         this.isAnimating = false;
