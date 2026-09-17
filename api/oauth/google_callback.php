@@ -49,11 +49,23 @@ if (!is_array($token) || empty($token['access_token'])) {
 
 $profileResponse = httpRequest('https://openidconnect.googleapis.com/v1/userinfo', [], [
     'Authorization: Bearer ' . $token['access_token']
-]);
+], 'GET');
 $profile = json_decode($profileResponse, true);
+if (!is_array($profile)) {
+    googleFail('Google 個人資料取得失敗，請重新嘗試');
+}
+
 $googleId = trim($profile['sub'] ?? '');
 $email = strtolower(trim($profile['email'] ?? ''));
-if ($googleId === '' || $email === '' || ($profile['email_verified'] ?? false) !== true) {
+if ($googleId === '' || $email === '') {
+    googleFail('Google 個人資料缺少必要的 email 資訊');
+}
+$emailVerified = filter_var(
+    $profile['email_verified'] ?? false,
+    FILTER_VALIDATE_BOOLEAN,
+    FILTER_NULL_ON_FAILURE
+);
+if ($emailVerified !== true) {
     googleFail('Google 帳號 email 未通過驗證');
 }
 
@@ -104,12 +116,30 @@ try {
     googleFail('Google 登入時資料庫發生錯誤');
 }
 
-function httpRequest($url, $postFields = [], $headers = []) {
+function httpRequest($url, $postFields = [], $headers = [], $method = 'POST') {
+    $body = http_build_query($postFields);
+    if (!function_exists('curl_init')) {
+        if ($method === 'POST') {
+            $headers[] = 'Content-Type: application/x-www-form-urlencoded';
+        }
+        $context = stream_context_create([
+            'http' => [
+                'method' => $method,
+                'header' => implode("\r\n", $headers),
+                'content' => $method === 'POST' ? $body : '',
+                'timeout' => 10,
+                'ignore_errors' => true
+            ]
+        ]);
+        $result = file_get_contents($url, false, $context);
+        return $result === false ? '' : $result;
+    }
+
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST => true,
-        CURLOPT_POSTFIELDS => http_build_query($postFields),
+        CURLOPT_CUSTOMREQUEST => $method,
+        CURLOPT_POSTFIELDS => $method === 'POST' ? $body : null,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_TIMEOUT => 10
     ]);
