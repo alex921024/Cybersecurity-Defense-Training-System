@@ -79,7 +79,11 @@ php -S localhost:8000
 開啟：
 
 ```text
-http://localhost:8000/assets/html/login.html
+http://localhost/Cybersecurity-Defense-Training-System/assets/html/login.html
+```
+
+```text
+http://localhost/Cybersecurity-Defense-Training-System/test_code/create_test_accounts.php
 ```
 
 #### Apache / XAMPP
