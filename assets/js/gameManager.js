@@ -28,11 +28,8 @@ class GameManager {
         this.peaceCooldown = 0;
         this.attackCooldown = 0;
 
-        if (typeof ThreatRadar !== 'undefined') {
-            this.radar = new ThreatRadar();
-        } else {
-            this.radar = null;
-        }
+        this.radar = null;
+        this.initializeRadar();
 
         document.getElementById('cmd-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -52,7 +49,30 @@ class GameManager {
         window.gameManagerInstance = this; 
     }
 
-    init(difficulty) {
+    async init(difficulty) {
+        let result;
+        try {
+            const response = await fetch('api/student/get_game_data.php', { cache: 'no-store' });
+            if (!response.ok) throw new Error(`遊戲資料 API 回應 ${response.status}`);
+            result = await response.json();
+        } catch (error) {
+            console.error('載入資料庫遊戲設定失敗:', error);
+            alert('無法載入資料庫遊戲設定，遊戲未啟動。');
+            return false;
+        }
+
+        if (result.status !== 'success' || !result.difficulties || !result.difficulties[difficulty]) {
+            console.error('資料庫缺少指定難度設定:', difficulty, result);
+            alert('資料庫缺少此難度設定，遊戲未啟動。');
+            return false;
+        }
+
+        GameDB.difficulties = result.difficulties;
+        GameDB.maliciousIPs = result.maliciousIPs;
+        GameDB.vipIPs = result.vipIPs;
+        GameDB.emails = result.emails;
+
+        this.initializeRadar();
         document.getElementById('menu-screen').classList.remove('active');
         document.getElementById('game-screen').classList.add('active');
         document.getElementById('terminal-output').innerHTML = '';
@@ -98,6 +118,13 @@ class GameManager {
 
         if(this.interval) clearInterval(this.interval);
         this.interval = setInterval(() => this.gameLoop(), 1000);
+        return true;
+    }
+
+    initializeRadar() {
+        if (!this.radar && typeof window.ThreatRadar === 'function') {
+            this.radar = new window.ThreatRadar();
+        }
     }
 
     updateMissionPanel(phase, objective, tip, stepIndex) {
@@ -133,7 +160,7 @@ class GameManager {
         if (this.activeThreat) {
             this.updateMissionPanel('攻擊偵測', `偵測到 ${this.activeThreat.toUpperCase()} 威脅。請先分析或限速，再進行封鎖。`, '使用 whois 或 netstat 取得更多資訊，必要時 deploy block/limit。', 2);
 
-            if (this.status.timer % 8 === 0) {
+                if (this.status.timer % 12 === 0) {
                 if (this.activeLimits.includes(this.activeThreat)) {
                     this.status.wifi = Math.min(100, this.status.wifi + 2); 
                     this.logTerminal(`[系統提示] 攻擊 (${this.activeThreat.toUpperCase()}) 已被限速緩解，請盡快找出來源 IP！`, "success");
@@ -170,7 +197,7 @@ class GameManager {
 
         const isSystemClear = !this.activeThreat && this.activeSideEffects.length === 0 && this.activeLimits.length === 0 && this.peaceCooldown <= 0;
 
-        if (isSystemClear && this.attackCooldown <= 0 && this.status.timer % 20 === 0) {
+        if (isSystemClear && this.attackCooldown <= 0) {
             this.generateEvent();
         }
 
@@ -199,10 +226,11 @@ class GameManager {
         else if (r.fishing && dice >= r.fishing[0] && dice <= r.fishing[1]) newThreat = "fishing";
 
         if (!newThreat) {
-            this.attackCooldown = 10;
+            this.attackCooldown = 20;
             return;
         }
         this.activeThreat = newThreat;
+        this.initializeRadar();
         if (this.radar && ['syn', 'udp', 'dns', 'icmp'].includes(newThreat)) this.radar.trigger(newThreat);
 
         if (newThreat === 'fishing') {
@@ -228,7 +256,6 @@ class GameManager {
         setTimeout(() => {
             let outputMsg = "";
             if (cleanTarget === this.activeThreat || cleanTarget === 'ip' || GameDB.maliciousIPs.includes(cleanTarget)) {
-                this.analyzedTargets.add(cleanTarget);
                 if (cleanTarget === 'syn' || GameDB.maliciousIPs.includes(cleanTarget)) this.analyzedTargets.add('ip'); 
                 
                 const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
@@ -246,7 +273,7 @@ class GameManager {
                 outputMsg = `[分析結果 - 高危險] <br>目標: ${cleanTarget.toUpperCase()}<br>狀態: 偵測到惡意 Payload。<br>建議行動: 立即進行阻斷 (Block)。`;
                 this.updateIdsAlert(`[情報解鎖] 已確認 ${cleanTarget.toUpperCase()} 為惡意來源，授權進行攔截。`);
                 this.logTerminal(`[Whois 分析] 檢索結果：${cleanTarget.toUpperCase()} 具高風險，授權封鎖！`, "system");
-            } 
+            }
             else if (cleanTarget === 'dns') {
                 this.analyzedTargets.add('dns');
                 outputMsg = `[分析結果 - 異常] <br>狀態: DNS 路由表遭異常放大請求污染。<br>建議行動: 清除 DNS 快取 (Flush)。`;
@@ -669,8 +696,7 @@ class GameManager {
         const isAttack = this.activeThreat && this.activeThreat !== 'fishing'; 
         const time = new Date().toLocaleTimeString('en-US', {hour12: false});
         
-        let allIPs = GameDB.maliciousIPs;
-        if (GameDB.vipIPs) allIPs = allIPs.concat(GameDB.vipIPs);
+        let allIPs = GameDB.vipIPs ? [...GameDB.vipIPs] : [];
         allIPs = allIPs.concat([`192.168.1.${Math.floor(Math.random()*255)}`]);
         
         const srcIP = isAttack ? GameDB.maliciousIPs[Math.floor(Math.random() * GameDB.maliciousIPs.length)] : allIPs[Math.floor(Math.random() * allIPs.length)];
@@ -710,7 +736,7 @@ class GameManager {
         filteredPackets.slice(0, 150).forEach(p => {
             const tr = document.createElement('tr');
             tr.className = p.isAttack ? 'packet-danger' : `proto-${p.proto.toLowerCase().replace('.', '')}`;  
-            const srcIpClass = p.isAttack || GameDB.maliciousIPs.includes(p.srcIP) ? 'warn-ip' : '';
+            const srcIpClass = p.isAttack ? 'warn-ip' : '';
             tr.innerHTML = `<td>${p.time}</td><td class="${srcIpClass}"><strong>${p.srcIP}</strong></td><td>${p.srcPort}</td><td>${p.destIP}</td><td style="color:#0077aa; font-weight:bold;">${p.destPort}</td><td>${p.proto}</td><td>${p.len}</td><td>${p.isAttack ? 'Malicious' : 'Standard'}</td>`;
             
             tr.onclick = () => {

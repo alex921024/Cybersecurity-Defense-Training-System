@@ -1,8 +1,8 @@
 const GameDB = {
     difficulties: {
-        0: { time: 240, ranges: { syn: [1, 10], udp: [11, 20], dns: null, icmp: null, fishing: [21, 30], none: [31, 100] } },
-        1: { time: 240, ranges: { syn: [1, 10], udp: [11, 20], dns: [21, 25], icmp: null, fishing: [26, 40], none: [41, 100] } },
-        2: { time: 480, ranges: { syn: [1, 10], udp: [11, 20], dns: [21, 30], icmp: [31, 40], fishing: [41, 55], none: [56, 100] } }
+        0: { time: 300, ranges: { syn: [1, 3], udp: [4, 6], dns: null, icmp: null, fishing: [7, 9], none: [10, 100] } },
+        1: { time: 360, ranges: { syn: [1, 3], udp: [4, 6], dns: [7, 8], icmp: null, fishing: [9, 12], none: [13, 100] } },
+        2: { time: 480, ranges: { syn: [1, 4], udp: [5, 8], dns: [9, 11], icmp: [12, 14], fishing: [15, 20], none: [21, 100] } }
     },
     maliciousIPs: ["103.24.55.12", "45.22.19.8", "188.166.25.190", "8.8.8.8", "167.99.14.22"],
     vipIPs: ["192.168.1.100", "10.0.0.5", "168.95.1.1"],

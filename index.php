@@ -262,9 +262,9 @@ header('Content-Type: text/html; charset=utf-8');
         }
         document.addEventListener('DOMContentLoaded', verifyLogin);
     </script>
-    <script src="assets/js/threatRadar.js"></script>
+    <script src="assets/js/threatRadar.js?v=20260918"></script>
     <script type="module">
-        import GameManager from './assets/js/gameManager.js';
+        import GameManager from './assets/js/gameManager.js?v=20260918';
         window.gameManagerInstance = new GameManager();
         window.selectedDifficulty = 0;
 
@@ -308,10 +308,11 @@ header('Content-Type: text/html; charset=utf-8');
             document.getElementById('tutorial-modal').classList.remove('hidden');
         };
 
-        window.confirmStart = () => {
+        window.confirmStart = async () => {
+            const started = await window.gameManagerInstance.init(window.selectedDifficulty);
+            if (!started) return;
             document.getElementById('tutorial-modal').classList.add('hidden');
             window.switchTab(null, 'tab-firewall');
-            window.gameManagerInstance.init(window.selectedDifficulty);
         };
 
         window.quickCmd = (cmd) => {
