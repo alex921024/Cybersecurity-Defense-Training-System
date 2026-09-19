@@ -38,6 +38,65 @@ body, html {
     display: none !important;
 }
 
+.password-setup-box,
+.password-panel {
+    display: grid;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid #394b61;
+    background: #08111b;
+    color: #d4e4f5;
+}
+
+.password-setup-box {
+    margin: 16px 0;
+}
+
+.password-setup-box label,
+.password-form-grid label {
+    display: grid;
+    gap: 6px;
+    color: #a7b8d6;
+    font-size: 0.9em;
+}
+
+.password-setup-box input,
+.password-form-grid input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #394b61;
+    border-radius: 4px;
+    background: #050b14;
+    color: #fff;
+    font-family: inherit;
+}
+
+.password-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.password-strength {
+    min-height: 1.2em;
+    color: #9fb3c8;
+    font-size: 0.9em;
+}
+
+#confirm-start-button:disabled,
+.password-panel button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+@media (max-width: 700px) {
+    .password-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* =========================================
    2. 主選單畫面 (Main Menu)
 ========================================= */
@@ -375,6 +434,22 @@ body, html {
     color: #fff !important;
     border-color: #ff4444 !important;
     animation: tab-blink 1s infinite;
+}
+
+.policy-btn.policy-disabled,
+.policy-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    color: #777;
+    border-color: #333;
+    box-shadow: none;
+}
+
+.policy-btn.policy-disabled:hover,
+.policy-btn:disabled:hover {
+    background: #121212;
+    color: #777;
+    box-shadow: none;
 }
 
 .scroll-box {

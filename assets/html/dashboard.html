@@ -26,6 +26,7 @@
             <button class="menu-btn active" onclick="switchTab('users', this)"><i class="fas fa-users"></i> 帳號清單與審核</button>
             <button class="menu-btn" onclick="switchTab('analytics', this)"><i class="fas fa-chart-line"></i> 訓練成效分析</button>
             <button class="menu-btn" onclick="switchTab('logs', this)"><i class="fas fa-history"></i> 操作日誌回放</button>
+            <button class="menu-btn teacher-only" style="display:none;" onclick="switchTab('difficulties', this)"><i class="fas fa-sliders-h"></i> 我的訓練難度</button>
             <button class="menu-btn admin-only" style="display:none;" onclick="switchTab('questions', this)"><i class="fas fa-database"></i> 動態題庫管理</button>
         </nav>
         <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> 安全登出</button>
@@ -163,6 +164,92 @@
                 </table>
             </div>
         </section>
+
+        <!-- ================= 教師難度管理分頁 ================= -->
+        <section id="tab-difficulties" class="content-area tab-section">
+            <header class="topbar" style="margin: -30px -30px 20px -30px; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;"><i class="fas fa-sliders-h"></i> 我的訓練難度</h2>
+                <button class="btn-action btn-bind" onclick="resetDifficultyForm()"><i class="fas fa-plus"></i> 新增難度</button>
+            </header>
+
+            <div class="panel difficulty-editor-panel">
+                <h3 id="difficulty-form-title">建立教師自訂難度</h3>
+                <form id="difficulty-form" onsubmit="saveDifficulty(event)">
+                    <div class="difficulty-form-grid">
+                        <label>難度名稱<input id="difficulty-name" type="text" maxlength="100" required placeholder="例如：TCP 封包分析訓練"></label>
+                        <label>遊戲時間（秒）<input id="difficulty-time" type="number" min="30" max="86400" value="300" required></label>
+                        <label class="difficulty-description">難度說明<input id="difficulty-description" type="text" maxlength="255" placeholder="說明本次訓練目標"></label>
+                    </div>
+
+                    <div class="difficulty-options-grid">
+                        <fieldset>
+                            <legend>可用防禦指令</legend>
+                            <label><input type="checkbox" data-policy-type="command" value="status" checked> status</label>
+                            <label><input type="checkbox" data-policy-type="command" value="netstat" checked> netstat</label>
+                            <label><input type="checkbox" data-policy-type="command" value="whois" checked> whois</label>
+                            <label><input type="checkbox" data-policy-type="command" value="limit" checked> limit</label>
+                            <label><input type="checkbox" data-policy-type="command" value="block" checked> block</label>
+                            <label><input type="checkbox" data-policy-type="command" value="unblock" checked> unblock</label>
+                            <label><input type="checkbox" data-policy-type="command" value="flush-dns" checked> flush-dns</label>
+                            <label><input type="checkbox" data-policy-type="command" value="scan-mail" checked> scan-mail</label>
+                            <label><input type="checkbox" data-policy-type="command" value="passwd" checked> passwd</label>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>啟用攻擊模擬</legend>
+                            <label><input type="checkbox" data-policy-type="attack" value="syn" checked> TCP</label>
+                            <label><input type="checkbox" data-policy-type="attack" value="udp" checked> UDP</label>
+                            <label><input type="checkbox" data-policy-type="attack" value="icmp"> ICMP</label>
+                            <label><input type="checkbox" data-policy-type="attack" value="dns"> DNS</label>
+                            <label><input type="checkbox" data-policy-type="attack" value="crack" checked> 密碼破解</label>
+                            <label><input type="checkbox" data-policy-type="attack" value="fishing" checked> 釣魚郵件</label>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>網路攻擊機率區間</legend>
+                            <label>TCP<input id="rate-syn" type="text" value="1-10" placeholder="例如 1-10"></label>
+                            <label>UDP<input id="rate-udp" type="text" value="11-20" placeholder="例如 11-20"></label>
+                            <label>ICMP<input id="rate-icmp" type="text" placeholder="例如 21-30"></label>
+                            <label>DNS<input id="rate-dns" type="text" placeholder="例如 31-40"></label>
+                            <label>釣魚郵件<input id="rate-fishing" type="text" value="41-50" placeholder="例如 41-50"></label>
+                        </fieldset>
+
+                        <fieldset>
+                            <legend>細緻難度設定</legend>
+                            <label>攻擊冷卻（秒）<input id="setting-cooldown" type="number" min="3" max="60" value="12" required></label>
+                            <label>傷害倍率<input id="setting-damage" type="number" min="0.5" max="3" step="0.1" value="1" required></label>
+                            <label>破解速度<input id="setting-crack-speed" type="number" min="0" max="3" step="0.1" value="1" required></label>
+                            <label>初始 CPU<input id="setting-cpu" type="number" min="0" max="80" value="12" required></label>
+                            <label>初始 GPU<input id="setting-gpu" type="number" min="0" max="80" value="8" required></label>
+                            <label>初始 RAM<input id="setting-ram" type="number" min="0" max="80" value="25" required></label>
+                            <label>初始 Wi-Fi<input id="setting-wifi" type="number" min="0" max="80" value="5" required></label>
+                            <label>密碼最低長度<input id="setting-password-min-length" type="number" min="8" max="32" value="8" required></label>
+                            <label>更換密碼冷卻（秒）<input id="setting-password-cooldown" type="number" min="0" max="300" value="30" required></label>
+                            <label><input id="setting-password-number" type="checkbox" checked> 密碼要求數字</label>
+                            <label><input id="setting-password-uppercase" type="checkbox"> 密碼要求大寫</label>
+                            <label><input id="setting-password-symbol" type="checkbox"> 密碼要求特殊符號</label>
+                            <label><input id="setting-password-change" type="checkbox" checked> 允許遊戲中更換密碼</label>
+                            <label><input id="setting-dictionary-enabled" type="checkbox" checked> 啟用字典破解</label>
+                            <label>字典破解倍率<input id="setting-dictionary-speed" type="number" min="0" max="5" step="0.1" value="1" required></label>
+                        </fieldset>
+                    </div>
+                    <div class="difficulty-form-actions">
+                        <button type="submit" class="btn-action btn-bind"><i class="fas fa-save"></i> 儲存難度</button>
+                        <button type="button" class="btn-action btn-unbind" onclick="resetDifficultyForm()">取消</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="panel">
+                <h3>可用難度列表</h3>
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead><tr><th>名稱</th><th>說明</th><th>時間</th><th>攻擊</th><th>狀態</th><th>操作</th></tr></thead>
+                        <tbody id="difficulty-table-body"><tr><td colspan="6" style="text-align:center;">載入中...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </main>
 
     <script>
@@ -170,10 +257,16 @@
         let currentUserId = null;
         let performanceChartInstance = null; 
         let allGameRecords = []; 
+        let difficultyConfigs = [];
+        let editingDifficultyId = null;
+        let difficultyAssignmentData = { difficulties: [], students: [] };
 
         document.addEventListener("DOMContentLoaded", async () => {
             await checkAuth();
             await loadUserList();
+            if (currentUserRole === 'teacher' && window.location.hash === '#difficulties') {
+                switchTab('difficulties', document.querySelector('.teacher-only'));
+            }
         });
 
         // ==========================================
@@ -194,6 +287,9 @@
             }
             if (tabId === 'questions') {
                 loadThreatsAdmin();
+            }
+            if (tabId === 'difficulties') {
+                loadDifficulties();
             }
         }
 
@@ -219,6 +315,9 @@
                 if (data.role === "admin") {
                     document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
                 }
+                if (data.role === "teacher") {
+                    document.querySelectorAll('.teacher-only').forEach(el => el.style.display = 'block');
+                }
             } catch (error) { 
                 window.location.href = "login.html"; 
             }
@@ -232,6 +331,17 @@
                 const response = await fetch('../../api/admin/get_users.php');
                 const result = await response.json();
                 if (result.status === 'success') {
+                    if (currentUserRole === 'teacher') {
+                        try {
+                            const assignmentResponse = await fetch('../../api/teacher/manage_assignments.php');
+                            const assignmentResult = await assignmentResponse.json();
+                            if (assignmentResult.status === 'success') {
+                                difficultyAssignmentData = assignmentResult;
+                            }
+                        } catch (assignmentError) {
+                            console.error('載入難度分配資料失敗:', assignmentError);
+                        }
+                    }
                     renderTable(result.data);
                 }
             } catch (error) { 
@@ -284,6 +394,7 @@
                         } else {
                             actionButtons += `<button class="btn-action btn-unbind" onclick="updateUser(${user.user_id}, 'unbind_student')"><i class="fas fa-unlink"></i> 移出管理</button>`;
                             actionButtons += `<button class="btn-action btn-view" onclick="viewStudentRecords(${user.user_id}, '${user.username}')"><i class="fas fa-chart-bar"></i> 查看狀況</button>`;
+                            actionButtons += renderDifficultyAssignmentControls(user.user_id);
                         }
                     }
                 }
@@ -297,6 +408,53 @@
                 `;
                 tbody.appendChild(tr);
             });
+        }
+
+        function renderDifficultyAssignmentControls(studentId) {
+            const student = difficultyAssignmentData.students.find(item => item.user_id === studentId);
+            if (!student || student.is_approved !== 1) return '';
+            if (difficultyAssignmentData.difficulties.length === 0) {
+                return '<div class="assignment-controls"><small>尚未建立自訂難度</small></div>';
+            }
+
+            const assignedIds = new Set(student.difficulty_ids);
+            const options = difficultyAssignmentData.difficulties
+                .filter(difficulty => difficulty.is_active)
+                .map(difficulty => `
+                    <label title="${escapeHtml(difficulty.description || '')}">
+                        <input type="checkbox" ${assignedIds.has(Number(difficulty.diff_id)) ? 'checked' : ''}
+                               onchange="updateDifficultyAssignment(${studentId}, ${difficulty.diff_id}, this.checked)">
+                        ${escapeHtml(difficulty.name)}
+                    </label>`)
+                .join('');
+            return `<div class="assignment-controls"><small>教師難度</small>${options}</div>`;
+        }
+
+        async function updateDifficultyAssignment(studentId, difficultyId, shouldAssign) {
+            try {
+                const response = await fetch('../../api/teacher/manage_assignments.php', {
+                    method: shouldAssign ? 'POST' : 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_id: studentId, difficulty_id: difficultyId })
+                });
+                const result = await response.json();
+                if (result.status !== 'success') {
+                    alert(result.message);
+                    await loadUserList();
+                    return;
+                }
+
+                const student = difficultyAssignmentData.students.find(item => item.user_id === studentId);
+                if (student) {
+                    const ids = new Set(student.difficulty_ids);
+                    if (shouldAssign) ids.add(Number(difficultyId));
+                    else ids.delete(Number(difficultyId));
+                    student.difficulty_ids = Array.from(ids);
+                }
+            } catch (error) {
+                alert('網路連線錯誤！');
+                await loadUserList();
+            }
         }
 
         async function updateUser(targetUserId, actionType) {
@@ -563,7 +721,248 @@
         }
 
         // ==========================================
-        // 7. 系統登出
+        // 7. 教師難度管理邏輯
+        // ==========================================
+        const difficultyApi = '../../api/teacher/manage_difficulties.php';
+        const rateFields = ['syn', 'udp', 'icmp', 'dns', 'fishing'];
+        const attackLabels = { syn: 'TCP', udp: 'UDP', icmp: 'ICMP', dns: 'DNS', crack: '密碼破解', fishing: '釣魚郵件' };
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, char => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            })[char]);
+        }
+
+        function parseRateField(attackType) {
+            const value = document.getElementById(`rate-${attackType}`).value.trim();
+            if (value === '') return null;
+            const match = value.match(/^(\d+)\s*-\s*(\d+)$/);
+            if (!match) throw new Error(`${attackLabels[attackType]} 機率格式必須是「起始-結束」`);
+            return [Number(match[1]), Number(match[2])];
+        }
+
+        function collectDifficultyPayload() {
+            const commandPolicy = {};
+            document.querySelectorAll('#difficulty-form [data-policy-type="command"]').forEach(input => {
+                commandPolicy[input.value] = input.checked;
+            });
+
+            const attackPolicy = {};
+            document.querySelectorAll('#difficulty-form [data-policy-type="attack"]').forEach(input => {
+                attackPolicy[input.value] = input.checked;
+            });
+
+            const attackRates = { none: null };
+            rateFields.forEach(attackType => {
+                attackRates[attackType] = parseRateField(attackType);
+            });
+
+            const payload = {
+                name: document.getElementById('difficulty-name').value.trim(),
+                description: document.getElementById('difficulty-description').value.trim(),
+                total_time: Number(document.getElementById('difficulty-time').value),
+                command_policy: commandPolicy,
+                attack_policy: attackPolicy,
+                attack_rates: attackRates,
+                game_settings: {
+                    attack_cooldown: Number(document.getElementById('setting-cooldown').value),
+                    damage_multiplier: Number(document.getElementById('setting-damage').value),
+                    crack_speed: Number(document.getElementById('setting-crack-speed').value),
+                    password_policy: {
+                        min_length: Number(document.getElementById('setting-password-min-length').value),
+                        require_number: document.getElementById('setting-password-number').checked,
+                        require_uppercase: document.getElementById('setting-password-uppercase').checked,
+                        require_symbol: document.getElementById('setting-password-symbol').checked,
+                        allow_change: document.getElementById('setting-password-change').checked,
+                        change_cooldown: Number(document.getElementById('setting-password-cooldown').value)
+                    },
+                    dictionary_attack: {
+                        enabled: document.getElementById('setting-dictionary-enabled').checked,
+                        speed_multiplier: Number(document.getElementById('setting-dictionary-speed').value)
+                    },
+                    initial_load: {
+                        cpu: Number(document.getElementById('setting-cpu').value),
+                        gpu: Number(document.getElementById('setting-gpu').value),
+                        ram: Number(document.getElementById('setting-ram').value),
+                        wifi: Number(document.getElementById('setting-wifi').value)
+                    }
+                }
+            };
+            if (editingDifficultyId !== null) payload.diff_id = editingDifficultyId;
+            return payload;
+        }
+
+        async function loadDifficulties() {
+            try {
+                const response = await fetch(difficultyApi);
+                const result = await response.json();
+                if (result.status !== 'success') throw new Error(result.message || '難度載入失敗');
+                difficultyConfigs = result.data || [];
+                renderDifficultyTable();
+            } catch (error) {
+                document.getElementById('difficulty-table-body').innerHTML = `<tr><td colspan="6" style="text-align:center; color:#f85149;">${escapeHtml(error.message)}</td></tr>`;
+            }
+        }
+
+        function renderDifficultyTable() {
+            const tbody = document.getElementById('difficulty-table-body');
+            tbody.innerHTML = '';
+            if (difficultyConfigs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">目前沒有可用難度</td></tr>';
+                return;
+            }
+
+            difficultyConfigs.forEach(config => {
+                const enabledAttacks = Object.keys(attackLabels)
+                    .filter(attackType => config.attack_policy && config.attack_policy[attackType])
+                    .map(attackType => attackLabels[attackType])
+                    .join('、');
+                const status = config.is_active
+                    ? '<span style="color:#2ea043; font-weight:bold;">啟用中</span>'
+                    : '<span style="color:#8b949e;">已停用</span>';
+                const actions = config.is_system
+                    ? '<span style="color:#8b949e;">系統預設</span>'
+                    : `<button class="btn-action btn-view" onclick="editDifficulty(${config.diff_id})"><i class="fas fa-edit"></i> 編輯</button>
+                       <button class="btn-action btn-bind" onclick="toggleDifficulty(${config.diff_id}, ${!config.is_active})">${config.is_active ? '停用' : '啟用'}</button>
+                       <button class="btn-action btn-unbind" onclick="deleteDifficulty(${config.diff_id})"><i class="fas fa-trash"></i></button>`;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${escapeHtml(config.name)}</strong></td>
+                    <td>${escapeHtml(config.description || '-')}</td>
+                    <td>${config.total_time} 秒</td>
+                    <td>${escapeHtml(enabledAttacks || '-')}</td>
+                    <td>${status}</td>
+                    <td>${actions}</td>`;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function saveDifficulty(event) {
+            event.preventDefault();
+            let payload;
+            try {
+                payload = collectDifficultyPayload();
+            } catch (error) {
+                alert(error.message);
+                return;
+            }
+
+            const method = editingDifficultyId === null ? 'POST' : 'PATCH';
+            try {
+                const response = await fetch(difficultyApi, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') {
+                    resetDifficultyForm();
+                    loadDifficulties();
+                }
+            } catch (error) {
+                alert('網路連線錯誤！');
+            }
+        }
+
+        function editDifficulty(diffId) {
+            const config = difficultyConfigs.find(item => item.diff_id === diffId);
+            if (!config || config.is_system) return;
+            editingDifficultyId = diffId;
+            document.getElementById('difficulty-form-title').innerText = `編輯難度：${config.name}`;
+            document.getElementById('difficulty-name').value = config.name || '';
+            document.getElementById('difficulty-description').value = config.description || '';
+            document.getElementById('difficulty-time').value = config.total_time;
+
+            document.querySelectorAll('#difficulty-form [data-policy-type="command"]').forEach(input => {
+                input.checked = Boolean(config.command_policy && config.command_policy[input.value]);
+            });
+            document.querySelectorAll('#difficulty-form [data-policy-type="attack"]').forEach(input => {
+                input.checked = Boolean(config.attack_policy && config.attack_policy[input.value]);
+            });
+            rateFields.forEach(attackType => {
+                const range = config.attack_rates && config.attack_rates[attackType];
+                document.getElementById(`rate-${attackType}`).value = Array.isArray(range) ? `${range[0]}-${range[1]}` : '';
+            });
+            const settings = config.game_settings || {};
+            const initialLoad = settings.initial_load || {};
+            document.getElementById('setting-cooldown').value = settings.attack_cooldown ?? 12;
+            document.getElementById('setting-damage').value = settings.damage_multiplier ?? 1;
+            document.getElementById('setting-crack-speed').value = settings.crack_speed ?? 1;
+            document.getElementById('setting-cpu').value = initialLoad.cpu ?? 12;
+            document.getElementById('setting-gpu').value = initialLoad.gpu ?? 8;
+            document.getElementById('setting-ram').value = initialLoad.ram ?? 25;
+            document.getElementById('setting-wifi').value = initialLoad.wifi ?? 5;
+            const passwordPolicy = settings.password_policy || {};
+            const dictionaryAttack = settings.dictionary_attack || {};
+            document.getElementById('setting-password-min-length').value = passwordPolicy.min_length ?? 8;
+            document.getElementById('setting-password-cooldown').value = passwordPolicy.change_cooldown ?? 30;
+            document.getElementById('setting-password-number').checked = passwordPolicy.require_number !== false;
+            document.getElementById('setting-password-uppercase').checked = passwordPolicy.require_uppercase === true;
+            document.getElementById('setting-password-symbol').checked = passwordPolicy.require_symbol === true;
+            document.getElementById('setting-password-change').checked = passwordPolicy.allow_change !== false;
+            document.getElementById('setting-dictionary-enabled').checked = dictionaryAttack.enabled !== false;
+            document.getElementById('setting-dictionary-speed').value = dictionaryAttack.speed_multiplier ?? 1;
+            document.getElementById('difficulty-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function resetDifficultyForm() {
+            editingDifficultyId = null;
+            document.getElementById('difficulty-form').reset();
+            document.getElementById('difficulty-form-title').innerText = '建立教師自訂難度';
+            document.getElementById('difficulty-time').value = 300;
+            document.getElementById('setting-cooldown').value = 12;
+            document.getElementById('setting-damage').value = 1;
+            document.getElementById('setting-crack-speed').value = 1;
+            document.getElementById('setting-cpu').value = 12;
+            document.getElementById('setting-gpu').value = 8;
+            document.getElementById('setting-ram').value = 25;
+            document.getElementById('setting-wifi').value = 5;
+            document.getElementById('setting-password-min-length').value = 8;
+            document.getElementById('setting-password-cooldown').value = 30;
+            document.getElementById('setting-password-number').checked = true;
+            document.getElementById('setting-password-uppercase').checked = false;
+            document.getElementById('setting-password-symbol').checked = false;
+            document.getElementById('setting-password-change').checked = true;
+            document.getElementById('setting-dictionary-enabled').checked = true;
+            document.getElementById('setting-dictionary-speed').value = 1;
+            document.querySelectorAll('#difficulty-form [data-policy-type="command"]').forEach(input => {
+                input.checked = true;
+            });
+            document.querySelectorAll('#difficulty-form [data-policy-type="attack"]').forEach(input => {
+                input.checked = ['syn', 'udp', 'crack', 'fishing'].includes(input.value);
+            });
+        }
+
+        async function toggleDifficulty(diffId, isActive) {
+            try {
+                const response = await fetch(difficultyApi, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ diff_id: diffId, is_active: isActive })
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') loadDifficulties();
+            } catch (error) {
+                alert('網路連線錯誤！');
+            }
+        }
+
+        async function deleteDifficulty(diffId) {
+            if (!confirm('確定要刪除此自訂難度嗎？')) return;
+            try {
+                const response = await fetch(`${difficultyApi}?diff_id=${diffId}`, { method: 'DELETE' });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') loadDifficulties();
+            } catch (error) {
+                alert('網路連線錯誤！');
+            }
+        }
+
+        // ==========================================
+        // 8. 系統登出
         // ==========================================
         async function handleLogout() {
             if(!confirm("確定要登出系統嗎？")) return;

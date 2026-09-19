@@ -1,19 +1,22 @@
 class SystemStatus {
-    constructor() {
-        this.cpu = 12; this.gpu = 8; this.ram = 25; this.wifi = 5;
+    constructor(initialLoad = {}) {
+        this.cpu = initialLoad.cpu ?? 12;
+        this.gpu = initialLoad.gpu ?? 8;
+        this.ram = initialLoad.ram ?? 25;
+        this.wifi = initialLoad.wifi ?? 5;
         this.timer = 0; 
         this.crackProgress = 0; 
     }
 
-    applyDamage(type) {
+    applyDamage(type, multiplier = 1) {
         if (type === 'Fishing') {
-            const inc = Math.floor(Math.random() * 3) + 1; // 大幅調降：原為 2~5，現為 1~3
+            const inc = Math.max(1, Math.round((Math.floor(Math.random() * 3) + 1) * multiplier));
             this.cpu = Math.min(100, this.cpu + inc);
             this.gpu = Math.min(100, this.gpu + inc);
             this.wifi = Math.min(100, this.wifi + inc);
             this.ram = Math.min(100, this.ram + inc);
         } else {
-            const inc = Math.floor(Math.random() * 4) + 2; // 大幅調降：原為 5~10，現為 2~5
+            const inc = Math.max(1, Math.round((Math.floor(Math.random() * 4) + 2) * multiplier));
             this.gpu = Math.min(100, this.gpu + inc);
             this.wifi = Math.min(100, this.wifi + inc);
             this.ram = Math.min(100, this.ram + inc);

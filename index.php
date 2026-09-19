@@ -27,13 +27,13 @@ header('Content-Type: text/html; charset=utf-8');
             <button onclick="toggleDifficultySelect()">開 始</button>
             <button onclick="location.href='teaching/tutorial.php'">教 學</button>
             <button onclick="location.href='assets/html/student_dashboard.html'">返回控制台</button>
-            <button onclick="toggleSettings()">設定</button>
+            <?php if (($_SESSION['role'] ?? '') === 'teacher'): ?>
+                <button onclick="location.href='assets/html/dashboard.html#difficulties'">教師難度</button>
+            <?php endif; ?>
         </div>
         <div id="difficulty-content" class="menu-options hidden">
             <h2 style="color: #00FF00; text-align: center; margin-bottom: 20px;">請選擇訓練等級</h2>
-            <button onclick="prepareGame(0)">等級 0 (Easy - 240秒)</button>
-            <button onclick="prepareGame(1)">等級 1 (Normal - 240秒)</button>
-            <button onclick="prepareGame(2)">等級 2 (Hard - 480秒)</button>
+            <div id="difficulty-options"><p>正在載入可用難度...</p></div>
             <button class="break-btn" onclick="breakmenu()">返回</button>
         </div>
     </div>
@@ -175,6 +175,18 @@ header('Content-Type: text/html; charset=utf-8');
             <div id="tab-status" class="tab-content">
                 <h2 class="tab-title">🖥️ 系統硬體即時監控中心</h2>
                 <div class="time-banner">🕒 剩餘時間: <span id="timer">--</span></div>
+                <section class="password-panel" aria-labelledby="password-panel-title">
+                    <div>
+                        <h3 id="password-panel-title">系統密碼防護</h3>
+                        <p>遊戲密碼只用於本局字典破解模擬，不會修改登入密碼。</p>
+                    </div>
+                    <div class="password-form-grid">
+                        <label>新遊戲密碼<input id="game-password-change" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 碼"></label>
+                        <label>確認新密碼<input id="game-password-change-confirm" type="password" minlength="8" autocomplete="new-password" placeholder="再次輸入密碼"></label>
+                        <button type="button" class="manual-btn" onclick="changeGamePassword()">更換遊戲密碼</button>
+                    </div>
+                    <div id="game-password-change-strength" class="password-strength" aria-live="polite">尚未輸入新密碼</div>
+                </section>
                 <div class="monitor-grid">
                     <div class="chart-box">
                         <div class="chart-header"><span>CPU 使用率</span><span class="live-indicator"></span></div>
@@ -233,9 +245,18 @@ header('Content-Type: text/html; charset=utf-8');
 
     <div id="tutorial-modal" class="modal hidden">
         <div class="modal-content" style="border: 2px solid #FFA500;">
-            <h2 style="color: #FFA500;">🛡️ 任務簡報</h2>
+            <h2 style="color: #FFA500;">🛡️ 任務簡報與密碼設定</h2>
             <p>確保系統不崩潰。防禦 SOP：發現異常 ➡️ Whois 分析 ➡️ 部署規則封鎖。</p>
-            <button class="manual-btn" style="color: #ffffff;background-color: #0fe70f;" onclick="confirmStart()">確認了解</button>
+            <div class="password-setup-box">
+                <label>設定本局遊戲密碼
+                    <input id="game-password-initial" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 碼">
+                </label>
+                <label>確認本局遊戲密碼
+                    <input id="game-password-initial-confirm" type="password" minlength="8" autocomplete="new-password" placeholder="再次輸入密碼">
+                </label>
+                <div id="game-password-initial-strength" class="password-strength" aria-live="polite">開始前必須設定密碼</div>
+            </div>
+            <button id="confirm-start-button" class="manual-btn" style="color: #ffffff;background-color: #0fe70f;" onclick="confirmStart()" disabled>設定密碼後開始</button>
             <button class="btn-cancel" style="color: #e2e2e2 ;background-color: #e00f0f;" onclick="breaktoDifficulty()">返回</button>
         </div>
     </div>
@@ -267,6 +288,7 @@ header('Content-Type: text/html; charset=utf-8');
         import GameManager from './assets/js/gameManager.js?v=20260918';
         window.gameManagerInstance = new GameManager();
         window.selectedDifficulty = 0;
+        window.difficultyCatalog = {};
 
         window.switchTab = (evt, tabId) => {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -283,9 +305,47 @@ header('Content-Type: text/html; charset=utf-8');
             }
         };
 
-        window.toggleDifficultySelect = () => {
+        window.loadDifficultyOptions = async () => {
+            const container = document.getElementById('difficulty-options');
+            if (!container) return;
+            container.innerHTML = '<p>正在載入可用難度...</p>';
+
+            try {
+                const response = await fetch('api/student/get_game_data.php', { cache: 'no-store' });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success') throw new Error(result.message || '無法載入難度');
+
+                window.difficultyCatalog = result.difficulties || {};
+                container.innerHTML = '';
+                Object.entries(window.difficultyCatalog).forEach(([id, config]) => {
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.onclick = () => window.prepareGame(Number(id));
+                    button.textContent = `${config.name || `難度 ${id}`} - ${config.time} 秒`;
+                    if (config.description) button.title = config.description;
+                    container.appendChild(button);
+                });
+
+                if (container.children.length === 0) {
+                    container.innerHTML = '<p>目前沒有可用的訓練難度。</p>';
+                }
+
+                const requestedDifficulty = new URLSearchParams(window.location.search).get('difficulty');
+                if (requestedDifficulty !== null && window.difficultyCatalog[requestedDifficulty]) {
+                    window.prepareGame(Number(requestedDifficulty));
+                }
+            } catch (error) {
+                container.innerHTML = '<p>難度載入失敗，請重新整理頁面。</p>';
+                console.error('載入難度失敗:', error);
+            }
+        };
+
+        window.toggleDifficultySelect = async () => {
             document.getElementById('entry-content').classList.toggle('hidden');
             document.getElementById('difficulty-content').classList.toggle('hidden');
+            if (!document.getElementById('difficulty-content').classList.contains('hidden')) {
+                await window.loadDifficultyOptions();
+            }
         };
 
         window.breakmenu = () => {
@@ -305,15 +365,76 @@ header('Content-Type: text/html; charset=utf-8');
 
         window.prepareGame = (diff) => {
             window.selectedDifficulty = diff;
+            window.gameManagerInstance.previewDifficultyConfig = window.difficultyCatalog[diff] || null;
+            document.getElementById('game-password-initial').value = '';
+            document.getElementById('game-password-initial-confirm').value = '';
+            updateInitialPasswordStrength();
             document.getElementById('tutorial-modal').classList.remove('hidden');
         };
 
         window.confirmStart = async () => {
+            const password = document.getElementById('game-password-initial').value;
+            const confirmation = document.getElementById('game-password-initial-confirm').value;
+            const validation = window.validateGamePassword(password, confirmation);
+            if (!validation.valid) {
+                updateInitialPasswordStrength(validation.message);
+                return;
+            }
+            window.pendingGamePassword = password;
             const started = await window.gameManagerInstance.init(window.selectedDifficulty);
             if (!started) return;
             document.getElementById('tutorial-modal').classList.add('hidden');
             window.switchTab(null, 'tab-firewall');
         };
+
+        window.validateGamePassword = (password, confirmation) => {
+            return window.gameManagerInstance.validateGamePassword(password, confirmation);
+        };
+
+        function updateInitialPasswordStrength(message = '') {
+            const password = document.getElementById('game-password-initial').value;
+            const confirmation = document.getElementById('game-password-initial-confirm').value;
+            const result = password ? window.gameManagerInstance.getPasswordProfile(password) : null;
+            const strength = document.getElementById('game-password-initial-strength');
+            const button = document.getElementById('confirm-start-button');
+            if (!result) {
+                strength.textContent = message || '開始前必須設定密碼';
+                button.disabled = true;
+                return;
+            }
+            strength.textContent = message || `密碼強度：${result.label}（${result.strength}/100）`;
+            button.disabled = !window.validateGamePassword(password, confirmation).valid;
+        }
+
+        function updateChangePasswordStrength() {
+            const password = document.getElementById('game-password-change').value;
+            const profile = password ? window.gameManagerInstance.getPasswordProfile(password) : null;
+            document.getElementById('game-password-change-strength').textContent = profile
+                ? `密碼強度：${profile.label}（${profile.strength}/100）`
+                : '尚未輸入新密碼';
+        }
+
+        window.changeGamePassword = () => {
+            const password = document.getElementById('game-password-change').value;
+            const confirmation = document.getElementById('game-password-change-confirm').value;
+            const validation = window.validateGamePassword(password, confirmation);
+            const result = document.getElementById('game-password-change-strength');
+            if (!validation.valid) {
+                result.textContent = validation.message;
+                return;
+            }
+            const changed = window.gameManagerInstance.changeGamePassword(password);
+            result.textContent = changed ? '遊戲密碼已更新，破解進度已重置。' : '目前難度不允許更換密碼，或仍在冷卻時間內。';
+            if (changed) {
+                document.getElementById('game-password-change').value = '';
+                document.getElementById('game-password-change-confirm').value = '';
+            }
+        };
+
+        document.addEventListener('input', event => {
+            if (event.target.id === 'game-password-initial' || event.target.id === 'game-password-initial-confirm') updateInitialPasswordStrength();
+            if (event.target.id === 'game-password-change') updateChangePasswordStrength();
+        });
 
         window.quickCmd = (cmd) => {
             const input = document.getElementById('cmd-input');

@@ -4,12 +4,18 @@ class CLIModule {
     }
 
     execute(command) {
-        const args = command.trim().toLowerCase().split(' ');
+        const args = command.trim().toLowerCase().split(/\s+/);
         const cmd = args[0];
+        const commandName = cmd === 'analyze' ? 'whois' : cmd;
+        const policyCommands = ['status', 'netstat', 'whois', 'limit', 'block', 'unblock', 'flush-dns', 'scan-mail', 'passwd'];
+
+        if (policyCommands.includes(commandName) && !this.gm.isCommandEnabled(commandName)) {
+            return `[拒絕執行] 此訓練難度未啟用 ${commandName} 指令。`;
+        }
 
         switch (cmd) {
             case 'help':
-                return `[系統指令參考]\n- status    : 查看系統狀態\n- ipconfig  : 查詢網路設定\n- ping [IP] : 測試連線\n- netstat   : 顯示當前異常連線\n- whois [arg]: ⚠️ 分析目標IP或協定\n- block [arg]: 封鎖(IP或協定)\n- limit [arg]: 暫時對某協定限速緩解攻擊\n- unblock [arg]: 解除封鎖或限速(恢復副作用)\n- flush-dns : 淨化DNS(需先分析)\n- scan-mail : 掃描並隔離釣魚郵件\n- passwd    : 更改密碼防禦破解\n- clear     : 清空畫面`;
+                return this.getHelpText();
             
             case 'status':
                 const totalMail = this.gm.inbox.length;
@@ -59,9 +65,8 @@ class CLIModule {
             case 'scan-mail':
                 return this.gm.scanMailInbox();
 
-            case 'passwd': 
-                this.gm.status.crackProgress = 0;
-                return "請輸入新密碼: ******** \n[成功] 密碼變更完成！破解進度歸零。";
+            case 'passwd':
+                return "請至「系統狀態」的密碼防護區輸入新密碼與確認密碼。";
 
             case 'clear':
                 document.getElementById('terminal-output').innerHTML = '';
@@ -72,5 +77,30 @@ class CLIModule {
                 return "";
         }
     }
+
+    getHelpText() {
+        const helpItems = [
+            ['status', '查看系統狀態'],
+            ['ipconfig', '查詢網路設定'],
+            ['ping [IP]', '測試連線'],
+            ['netstat', '顯示當前異常連線'],
+            ['whois [arg]', '分析目標 IP 或協定'],
+            ['block [arg]', '封鎖 IP 或協定'],
+            ['limit [arg]', '暫時限制指定協定流量'],
+            ['unblock [arg]', '解除封鎖或限速'],
+            ['flush-dns', '清除 DNS 快取'],
+            ['scan-mail', '掃描並隔離釣魚郵件'],
+            ['passwd', '重置密碼破解進度'],
+            ['clear', '清空畫面']
+        ];
+        return `[系統指令參考]\n${helpItems
+            .filter(([name]) => !policyCommandsForHelp(name) || this.gm.isCommandEnabled(name))
+            .map(([name, description]) => `- ${name} : ${description}`)
+            .join('\n')}`;
+    }
+}
+
+function policyCommandsForHelp(command) {
+    return ['status', 'netstat', 'whois', 'block', 'limit', 'unblock', 'flush-dns', 'scan-mail', 'passwd'].includes(command);
 }
 export default CLIModule;

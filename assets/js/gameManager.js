@@ -27,6 +27,9 @@ class GameManager {
         
         this.peaceCooldown = 0;
         this.attackCooldown = 0;
+        this.gamePassword = '';
+        this.passwordProfile = null;
+        this.passwordChangeCooldown = 0;
 
         this.radar = null;
         this.initializeRadar();
@@ -78,7 +81,14 @@ class GameManager {
         document.getElementById('terminal-output').innerHTML = '';
         
         this.difficultyConfig = GameDB.difficulties[difficulty];
-        this.status = new SystemStatus();
+        this.commandPolicy = this.difficultyConfig.commandPolicy || {};
+        this.attackPolicy = this.difficultyConfig.attackPolicy || {};
+        this.gameSettings = this.difficultyConfig.gameSettings || {};
+        this.gamePassword = window.pendingGamePassword || '';
+        this.passwordProfile = this.getPasswordProfile(this.gamePassword);
+        window.pendingGamePassword = '';
+        this.passwordChangeCooldown = 0;
+        this.status = new SystemStatus(this.gameSettings.initial_load);
         this.status.timer = this.difficultyConfig.time;
         this.activeThreat = null;
         
@@ -94,8 +104,8 @@ class GameManager {
         this.activeLimits = [];
         this.isPacketPaused = false;
         
-        this.peaceCooldown = 15;
-        this.attackCooldown = 12;
+        this.peaceCooldown = this.gameSettings.attack_cooldown ?? 15;
+        this.attackCooldown = this.gameSettings.attack_cooldown ?? 12;
         
         this.analyzedTargets.clear();
         this.discoveredIPs.clear();
@@ -106,12 +116,14 @@ class GameManager {
         this.updateMissionPanel('待命中', '啟動監控，等待異常流量或釣魚郵件。', '保持系統穩定，使用 status 與 netstat 了解當前狀態。', 1);
 
         this.logTerminal("System boot successful. Initializing security protocols...", "system");
-        this.logTerminal(`開始執行難度等級: ${difficulty}。請隨時注意系統負載與破解進度。`, "alert");
+        this.logTerminal(`開始執行難度：${this.difficultyConfig.name || `等級 ${difficulty}`}。請隨時注意系統負載與破解進度。`, "alert");
         
         this.receiveEmail(false);
         this.initCharts();
         this.renderRulesGUI();
         this.renderThreatIntel();
+        this.syncPolicyButtons();
+        this.syncCommandUI();
         
         const logEl = document.getElementById('ids-alert-log');
         if (logEl) logEl.innerHTML = "系統防禦已初始化，處於全面監控狀態...";
@@ -125,6 +137,81 @@ class GameManager {
         if (!this.radar && typeof window.ThreatRadar === 'function') {
             this.radar = new window.ThreatRadar();
         }
+    }
+
+    isCommandEnabled(command) {
+        return !this.difficultyConfig?.commandPolicy || this.difficultyConfig.commandPolicy[command] !== false;
+    }
+
+    isAttackEnabled(attackType) {
+        return !this.difficultyConfig?.attackPolicy || this.difficultyConfig.attackPolicy[attackType] !== false;
+    }
+
+    getPasswordProfile(password) {
+        const value = String(password || '');
+        const commonPasswords = ['password', 'qwerty', 'letmein', 'admin', 'welcome', '12345678', 'iloveyou'];
+        const hasLower = /[a-z]/.test(value);
+        const hasUpper = /[A-Z]/.test(value);
+        const hasNumber = /\d/.test(value);
+        const hasSymbol = /[^A-Za-z0-9]/.test(value);
+        const repeated = /(.)\1{2,}/.test(value);
+        const isCommon = commonPasswords.includes(value.toLowerCase());
+        const hasSequence = /(?:1234|abcd|qwer|asdf)/i.test(value);
+        let strength = Math.min(100, value.length * 4);
+        strength += hasLower ? 8 : 0;
+        strength += hasUpper ? 12 : 0;
+        strength += hasNumber ? 12 : 0;
+        strength += hasSymbol ? 18 : 0;
+        strength += value.length >= 12 ? 18 : 0;
+        strength -= isCommon ? 45 : 0;
+        strength -= hasSequence ? 18 : 0;
+        strength -= repeated ? 15 : 0;
+        strength = Math.max(0, Math.min(100, Math.round(strength)));
+        const label = strength < 35 ? '弱' : strength < 65 ? '中' : strength < 85 ? '強' : '極強';
+        const dictionaryFactor = isCommon ? 3.5 : hasSequence ? 2.2 : strength < 50 ? 1.6 : strength < 75 ? 0.9 : 0.45;
+        return { strength, label, dictionaryFactor };
+    }
+
+    validateGamePassword(password, confirmation) {
+        const settings = this.difficultyConfig?.gameSettings || this.previewDifficultyConfig?.gameSettings || {};
+        const policy = settings.password_policy || {};
+        const minLength = policy.min_length ?? 8;
+        if (password.length < minLength) return { valid: false, message: `密碼至少需要 ${minLength} 碼。` };
+        if (/\s/.test(password)) return { valid: false, message: '密碼不可包含空白。' };
+        if (password !== confirmation) return { valid: false, message: '兩次密碼不一致。' };
+        if (policy.require_number && !/\d/.test(password)) return { valid: false, message: '密碼必須包含數字。' };
+        if (policy.require_uppercase && !/[A-Z]/.test(password)) return { valid: false, message: '密碼必須包含大寫英文字母。' };
+        if (policy.require_symbol && !/[^A-Za-z0-9]/.test(password)) return { valid: false, message: '密碼必須包含特殊符號。' };
+        const profile = this.getPasswordProfile(password);
+        if (profile.strength < 35) return { valid: false, message: '密碼過於簡單，請加入數字、大小寫或特殊符號。' };
+        return { valid: true, profile };
+    }
+
+    changeGamePassword(password) {
+        const policy = this.gameSettings.password_policy || {};
+        if (policy.allow_change === false || this.passwordChangeCooldown > 0) return false;
+        this.gamePassword = password;
+        this.passwordProfile = this.getPasswordProfile(password);
+        this.status.crackProgress = 0;
+        this.passwordChangeCooldown = policy.change_cooldown ?? 30;
+        this.logTerminal('[密碼防護] 遊戲密碼已更新，字典破解進度歸零。', 'success');
+        return true;
+    }
+
+    syncCommandUI() {
+        document.querySelectorAll('.quick-commands .cmd-tag').forEach(tag => {
+            const command = tag.textContent.trim().split(/\s+/)[0];
+            const enabled = this.isCommandEnabled(command);
+            tag.hidden = !enabled;
+            tag.title = enabled ? '' : `此難度未啟用 ${command} 指令`;
+        });
+
+        document.querySelectorAll('#tab-manual tbody tr').forEach(row => {
+            const code = row.querySelector('code');
+            if (!code) return;
+            const command = code.textContent.trim().split(/\s+/)[0];
+            row.hidden = !this.isCommandEnabled(command);
+        });
     }
 
     updateMissionPanel(phase, objective, tip, stepIndex) {
@@ -145,7 +232,15 @@ class GameManager {
 
     gameLoop() {
         this.status.timer--;
-        this.status.crackProgress += (Math.random() * 0.1 + 0.02); 
+        if (this.isAttackEnabled('crack')) {
+            const crackSpeed = this.gameSettings.crack_speed ?? 1;
+            const dictionaryFactor = this.passwordProfile?.dictionaryFactor ?? 1;
+            const dictionaryPolicy = this.gameSettings.dictionary_attack || {};
+            if (dictionaryPolicy.enabled !== false) {
+                this.status.crackProgress += (Math.random() * 0.1 + 0.02) * crackSpeed * dictionaryFactor * (dictionaryPolicy.speed_multiplier ?? 1);
+            }
+        }
+        if (this.passwordChangeCooldown > 0) this.passwordChangeCooldown--;
 
         if (this.peaceCooldown > 0) {
             this.peaceCooldown--;
@@ -165,7 +260,10 @@ class GameManager {
                     this.status.wifi = Math.min(100, this.status.wifi + 2); 
                     this.logTerminal(`[系統提示] 攻擊 (${this.activeThreat.toUpperCase()}) 已被限速緩解，請盡快找出來源 IP！`, "success");
                 } else {
-                    this.status.applyDamage(this.activeThreat === 'fishing' ? 'Fishing' : 'Network');
+                    this.status.applyDamage(
+                        this.activeThreat === 'fishing' ? 'Fishing' : 'Network',
+                        this.gameSettings.damage_multiplier ?? 1
+                    );
                     if (this.activeThreat === 'fishing') this.triggerErrorFlash();
                     else this.logTerminal(`[系統警告] 未處理的網路威脅 (${this.activeThreat.toUpperCase()})！伺服器負載飆升！`, "alert");
                 }
@@ -219,11 +317,11 @@ class GameManager {
         const r = this.difficultyConfig.ranges;
         let newThreat = null;
 
-        if (r.syn && dice >= r.syn[0] && dice <= r.syn[1]) newThreat = "syn";
-        else if (r.udp && dice >= r.udp[0] && dice <= r.udp[1]) newThreat = "udp";
-        else if (r.dns && dice >= r.dns[0] && dice <= r.dns[1]) newThreat = "dns";
-        else if (r.icmp && dice >= r.icmp[0] && dice <= r.icmp[1]) newThreat = "icmp";
-        else if (r.fishing && dice >= r.fishing[0] && dice <= r.fishing[1]) newThreat = "fishing";
+        if (this.isAttackEnabled('syn') && r.syn && dice >= r.syn[0] && dice <= r.syn[1]) newThreat = "syn";
+        else if (this.isAttackEnabled('udp') && r.udp && dice >= r.udp[0] && dice <= r.udp[1]) newThreat = "udp";
+        else if (this.isAttackEnabled('dns') && r.dns && dice >= r.dns[0] && dice <= r.dns[1]) newThreat = "dns";
+        else if (this.isAttackEnabled('icmp') && r.icmp && dice >= r.icmp[0] && dice <= r.icmp[1]) newThreat = "icmp";
+        else if (this.isAttackEnabled('fishing') && r.fishing && dice >= r.fishing[0] && dice <= r.fishing[1]) newThreat = "fishing";
 
         if (!newThreat) {
             this.attackCooldown = 20;
@@ -247,6 +345,10 @@ class GameManager {
     }
 
     analyzeThreat(target) {
+        if (!this.isCommandEnabled('whois')) {
+            return "[拒絕執行] 此訓練難度未啟用 whois 指令。";
+        }
+
         const cleanTarget = target.toLowerCase().trim();
         if (!cleanTarget) return "請輸入有效的 IP 或協定名稱。";
 
@@ -311,6 +413,10 @@ class GameManager {
     }
 
     applyLimitAction(arg) {
+        if (!this.isCommandEnabled('limit')) {
+            return "[拒絕執行] 此訓練難度未啟用 limit 指令。";
+        }
+
         const cleanArg = arg.toLowerCase().trim();
         if (['udp', 'tcp', 'icmp', 'dns'].includes(cleanArg)) {
             if (!this.activeLimits.includes(cleanArg)) {
@@ -324,6 +430,10 @@ class GameManager {
     }
 
     applyBlockAction(arg) {
+        if (!this.isCommandEnabled('block')) {
+            return "[拒絕執行] 此訓練難度未啟用 block 指令。";
+        }
+
         const cleanArg = arg.toLowerCase().trim();
         
         if (GameDB.vipIPs && GameDB.vipIPs.includes(cleanArg)) {
@@ -370,7 +480,7 @@ class GameManager {
             this.analyzedTargets.clear();
             
             this.peaceCooldown = 10;
-            this.attackCooldown = Math.max(this.attackCooldown, 12);
+            this.attackCooldown = Math.max(this.attackCooldown, this.gameSettings.attack_cooldown ?? 12);
             
             if (this.discoveredIPs.has(cleanArg)) {
                 let info = this.discoveredIPs.get(cleanArg);
@@ -396,6 +506,10 @@ class GameManager {
     }
 
     unblockAction(arg) {
+        if (!this.isCommandEnabled('unblock')) {
+            return "[拒絕執行] 此訓練難度未啟用 unblock 指令。";
+        }
+
         const cleanArg = arg.toLowerCase().trim();
         let msg = "";
         
@@ -419,6 +533,10 @@ class GameManager {
     }
 
     applyFlushDns() {
+        if (!this.isCommandEnabled('flush-dns')) {
+            return "[拒絕執行] 此訓練難度未啟用 flush-dns 指令。";
+        }
+
         if (!this.analyzedTargets.has('dns') && this.activeThreat === "dns") {
             this.triggerErrorFlash();
             return `[錯誤：違反 SOP] 請先使用 whois dns 分析 DNS 狀態，確認污染後再清除。`;
@@ -431,7 +549,7 @@ class GameManager {
             this.analyzedTargets.clear();
             
             this.peaceCooldown = 10;
-            this.attackCooldown = Math.max(this.attackCooldown, 12);
+            this.attackCooldown = Math.max(this.attackCooldown, this.gameSettings.attack_cooldown ?? 12);
             
             const ruleId = "RULE-" + Math.floor(Math.random() * 9000 + 1000);
             this.activeRules.unshift({ id: ruleId, target: "DNS CACHE", action: "FLUSH & RE-ROUTE", time: new Date().toLocaleTimeString() });
@@ -475,11 +593,16 @@ class GameManager {
     }
 
     syncPolicyButtons() {
+        const buttonCommands = { udp: 'block', icmp: 'block', dns: 'flush-dns', ip: 'block' };
         ['udp', 'icmp', 'dns', 'ip'].forEach(type => {
             const btn = document.getElementById(`btn-mitigate-${type}`);
             if (!btn) return;
+            const enabled = this.isCommandEnabled(buttonCommands[type]);
+            btn.disabled = !enabled;
+            btn.title = enabled ? '' : `此難度未啟用 ${buttonCommands[type]} 指令`;
             const isActive = this.activeThreat === type || (type === 'ip' && this.activeThreat === 'syn');
             btn.classList.toggle('active-policy', isActive);
+            btn.classList.toggle('policy-disabled', !enabled);
         });
     }
 
@@ -552,6 +675,10 @@ class GameManager {
     }
 
     scanMailInbox() {
+        if (!this.isCommandEnabled('scan-mail')) {
+            return "[拒絕執行] 此訓練難度未啟用 scan-mail 指令。";
+        }
+
         const maliciousMail = this.inbox.find(mail => mail.isMalicious);
         if (!maliciousMail) {
             this.updateIdsAlert("[信件防禦] 目前沒有可疑釣魚郵件。\n");
@@ -574,7 +701,7 @@ class GameManager {
             if (this.activeThreat === 'fishing') {
                 this.activeThreat = null;
                 this.peaceCooldown = 10;
-                this.attackCooldown = Math.max(this.attackCooldown, 12);
+                this.attackCooldown = Math.max(this.attackCooldown, this.gameSettings.attack_cooldown ?? 12);
             }
             this.renderMailList();
             this.updateIdsAlert("[信件防禦] 已掃描並隔離釣魚郵件。系統安全提升。\n");
@@ -606,7 +733,7 @@ class GameManager {
                     mail.punished = true;
                     if (mail.isMalicious) {
                         this.triggerErrorFlash();
-                        this.status.applyDamage('Fishing');
+                        this.status.applyDamage('Fishing', this.gameSettings.damage_multiplier ?? 1);
                         this.logTerminal(`[重大警報] 釣魚郵件未處理，系統遭感染！`, "danger"); 
                         
                         if (this.activeThreat === 'fishing') {
@@ -669,9 +796,9 @@ class GameManager {
                 this.triggerErrorFlash(); 
                 this.activeThreat = null; 
                 this.peaceCooldown = 10; 
-                this.attackCooldown = Math.max(this.attackCooldown, 12);
-                this.status.applyDamage('Fishing'); 
-                this.status.applyDamage('Fishing'); 
+                this.attackCooldown = Math.max(this.attackCooldown, this.gameSettings.attack_cooldown ?? 12);
+                this.status.applyDamage('Fishing', this.gameSettings.damage_multiplier ?? 1);
+                this.status.applyDamage('Fishing', this.gameSettings.damage_multiplier ?? 1);
                 this.logTerminal(`[重大警報] 誤點惡意連結，系統遭感染！`, "danger");
                 this.showNotification("警告：誤觸釣魚連結！資源大幅消耗。", 'danger');
                 this.updateMissionPanel('系統受損', '誤點惡意郵件，請即刻修復並保持監控。', '建議立即使用 passwd 或防火牆規則降低風險。', 3);
@@ -825,6 +952,10 @@ class GameManager {
         } catch (error) {
             console.error("❌ 存檔失敗:", error);
         }
+
+        this.gamePassword = '';
+        this.passwordProfile = null;
+        window.pendingGamePassword = '';
 
         // 3. 顯示結算畫面
         setTimeout(() => {

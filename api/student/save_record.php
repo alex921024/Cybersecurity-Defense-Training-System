@@ -23,6 +23,19 @@ if ($difficulty < 0 || $survival_time < 0 || $final_score < 0) {
 }
 
 try {
+        $difficultyStmt = $pdo->prepare(
+                "SELECT d.diff_id
+                 FROM difficulty_configs d
+                 JOIN users u ON u.user_id = ? AND u.role = 'student' AND u.is_approved = 1
+                 WHERE d.diff_id = ? AND d.is_active = 1
+                     AND (d.owner_user_id IS NULL OR d.owner_user_id = u.teacher_id)"
+        );
+        $difficultyStmt->execute([$user_id, $difficulty]);
+    if (!$difficultyStmt->fetch()) {
+        echo json_encode(["status" => "error", "message" => "無權使用此訓練難度"]);
+        exit;
+    }
+
     // 3. 寫入資料庫
     $sql = "INSERT INTO game_records (user_id, difficulty, survival_time, final_score, end_reason, action_logs) 
             VALUES (?, ?, ?, ?, ?, ?)";

@@ -72,10 +72,59 @@ CREATE TABLE game_records (
 -- =========================================
 
 -- 5. 遊戲難易度設定表 (difficulty_configs)
-CREATE TABLE difficulty_configs (
-    diff_id INT PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS difficulty_configs (
+    diff_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(255) DEFAULT NULL,
+    owner_user_id INT DEFAULT NULL,
     total_time INT NOT NULL,
-    attack_rates JSON NOT NULL
+    attack_rates JSON NOT NULL,
+    command_policy JSON NOT NULL,
+    attack_policy JSON NOT NULL,
+    game_settings JSON NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 相容既有資料庫：為原有難度表補上教師自訂難度所需欄位。
+ALTER TABLE difficulty_configs MODIFY COLUMN diff_id INT NOT NULL AUTO_INCREMENT;
+ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT '未命名難度';
+ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT NULL;
+ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS owner_user_id INT DEFAULT NULL;
+ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS command_policy JSON NULL;
+ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS attack_policy JSON NULL;
+ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS game_settings JSON NULL;
+ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS created_at DATETIME DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+SET @difficulty_owner_fk_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'difficulty_configs'
+      AND CONSTRAINT_NAME = 'fk_difficulty_owner'
+);
+SET @difficulty_owner_fk_sql = IF(
+    @difficulty_owner_fk_exists = 0,
+    'ALTER TABLE difficulty_configs ADD CONSTRAINT fk_difficulty_owner FOREIGN KEY (owner_user_id) REFERENCES users(user_id) ON DELETE SET NULL',
+    'SELECT 1'
+);
+PREPARE difficulty_owner_fk_stmt FROM @difficulty_owner_fk_sql;
+EXECUTE difficulty_owner_fk_stmt;
+DEALLOCATE PREPARE difficulty_owner_fk_stmt;
+
+-- 自訂難度使用權限：教師可將自己的難度分配給所管理的學生。
+CREATE TABLE IF NOT EXISTS difficulty_assignments (
+    assignment_id INT AUTO_INCREMENT PRIMARY KEY,
+    difficulty_id INT NOT NULL,
+    student_id INT NOT NULL,
+    assigned_by INT NOT NULL,
+    assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_difficulty_student (difficulty_id, student_id),
+    FOREIGN KEY (difficulty_id) REFERENCES difficulty_configs(diff_id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (assigned_by) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 6. 惡意 IP 題庫表 (threat_ips)
@@ -105,11 +154,40 @@ CREATE TABLE phishing_emails (
 
 
 
-TRUNCATE TABLE difficulty_configs;
-INSERT INTO difficulty_configs (diff_id, total_time, attack_rates) VALUES 
-(0, 300, '{"syn": [1, 2], "udp": [3, 4], "dns": null, "icmp": null, "fishing": [5, 6], "none": [7, 100]}'),
-(1, 360, '{"syn": [1, 2], "udp": [3, 4], "dns": [5, 6], "icmp": null, "fishing": [7, 8], "none": [9, 100]}'),
-(2, 480, '{"syn": [1, 3], "udp": [4, 5], "dns": [6, 7], "icmp": [8, 9], "fishing": [10, 12], "none": [13, 100]}');
+DELETE FROM difficulty_assignments;
+DELETE FROM difficulty_configs;
+ALTER TABLE difficulty_configs AUTO_INCREMENT = 3;
+SET @previous_sql_mode = @@SESSION.sql_mode;
+SET SESSION sql_mode = CONCAT_WS(',', @@SESSION.sql_mode, 'NO_AUTO_VALUE_ON_ZERO');
+INSERT INTO difficulty_configs
+    (diff_id, name, description, owner_user_id, total_time, attack_rates, command_policy, attack_policy, game_settings, is_active)
+VALUES
+(0, '基礎防禦', '系統預設入門難度', NULL, 300,
+    '{"syn": [1, 2], "udp": [3, 4], "dns": null, "icmp": null, "fishing": [5, 6], "none": [7, 100]}',
+    '{"status": true, "netstat": true, "whois": true, "limit": true, "block": true, "unblock": true, "flush-dns": true, "scan-mail": true, "passwd": true}',
+    '{"syn": true, "udp": true, "icmp": false, "dns": false, "crack": true, "fishing": true}',
+    '{"attack_cooldown": 12, "damage_multiplier": 1, "crack_speed": 1, "initial_load": {"cpu": 12, "gpu": 8, "ram": 25, "wifi": 5}, "password_policy": {"min_length": 8, "require_number": true, "require_uppercase": false, "require_symbol": false, "allow_change": true, "change_cooldown": 30}, "dictionary_attack": {"enabled": true, "speed_multiplier": 1}}',
+    TRUE),
+(1, '進階防禦', '系統預設進階難度', NULL, 360,
+    '{"syn": [1, 2], "udp": [3, 4], "dns": [5, 6], "icmp": null, "fishing": [7, 8], "none": [9, 100]}',
+    '{"status": true, "netstat": true, "whois": true, "limit": true, "block": true, "unblock": true, "flush-dns": true, "scan-mail": true, "passwd": true}',
+    '{"syn": true, "udp": true, "icmp": false, "dns": true, "crack": true, "fishing": true}',
+    '{"attack_cooldown": 12, "damage_multiplier": 1, "crack_speed": 1, "initial_load": {"cpu": 12, "gpu": 8, "ram": 25, "wifi": 5}, "password_policy": {"min_length": 8, "require_number": true, "require_uppercase": false, "require_symbol": false, "allow_change": true, "change_cooldown": 30}, "dictionary_attack": {"enabled": true, "speed_multiplier": 1}}',
+    TRUE),
+(2, '專家防禦', '系統預設專家難度', NULL, 480,
+    '{"syn": [1, 3], "udp": [4, 5], "dns": [6, 7], "icmp": [8, 9], "fishing": [10, 12], "none": [13, 100]}',
+    '{"status": true, "netstat": true, "whois": true, "limit": true, "block": true, "unblock": true, "flush-dns": true, "scan-mail": true, "passwd": true}',
+    '{"syn": true, "udp": true, "icmp": true, "dns": true, "crack": true, "fishing": true}',
+    '{"attack_cooldown": 12, "damage_multiplier": 1, "crack_speed": 1, "initial_load": {"cpu": 12, "gpu": 8, "ram": 25, "wifi": 5}, "password_policy": {"min_length": 8, "require_number": true, "require_uppercase": false, "require_symbol": false, "allow_change": true, "change_cooldown": 30}, "dictionary_attack": {"enabled": true, "speed_multiplier": 1}}',
+    TRUE);
+SET SESSION sql_mode = @previous_sql_mode;
+
+-- 為舊資料庫中已存在的預設難度補上政策內容；新安裝會由上方 INSERT 直接寫入。
+UPDATE difficulty_configs
+SET command_policy = COALESCE(command_policy, '{"status": true, "netstat": true, "whois": true, "limit": true, "block": true, "unblock": true, "flush-dns": true, "scan-mail": true, "passwd": true}'),
+    attack_policy = COALESCE(attack_policy, '{"syn": true, "udp": true, "icmp": true, "dns": true, "crack": true, "fishing": true}'),
+    game_settings = COALESCE(game_settings, '{"attack_cooldown": 12, "damage_multiplier": 1, "crack_speed": 1, "initial_load": {"cpu": 12, "gpu": 8, "ram": 25, "wifi": 5}, "password_policy": {"min_length": 8, "require_number": true, "require_uppercase": false, "require_symbol": false, "allow_change": true, "change_cooldown": 30}, "dictionary_attack": {"enabled": true, "speed_multiplier": 1}}')
+WHERE command_policy IS NULL OR attack_policy IS NULL OR game_settings IS NULL;
 
 
 -- 2. 匯入惡意 IP 題庫 (threat_ips)

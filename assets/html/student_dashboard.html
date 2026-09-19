@@ -39,6 +39,17 @@
                 <p id="teacher-status-text" style="font-size: 0.9em; color: #a7b8d6; margin-top: 8px;"></p>
             </div>
 
+            <div class="panel" style="margin-bottom: 20px;">
+                <h3>教師訓練難度</h3>
+                <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap;">
+                    <select id="teacher-difficulty-select" disabled style="min-width: 300px; padding: 8px; background: #050b14; border: 1px solid #1f2c3a; color: #fff; border-radius: 4px;">
+                        <option value="">請先完成教師綁定與核准</option>
+                    </select>
+                    <button id="start-teacher-difficulty" onclick="startTeacherDifficulty()" disabled style="padding: 8px 15px; background: #00ebff; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">開始此難度</button>
+                </div>
+                <p id="difficulty-status-text" style="font-size: 0.9em; color: #a7b8d6; margin-top: 8px;">教師核准後可使用啟用中的自訂訓練難度。</p>
+            </div>
+
             <div class="panel">
                 <h3>歷史挑戰明細</h3>
                 <table class="data-table">
@@ -95,6 +106,11 @@
                         let statusStr = result.is_approved == 1 ? " (已核准)" : " (審核中...)";
                         document.getElementById('display-teacher').innerText = result.teacher_name + statusStr;
                     }
+                    let teacherDifficulties = result.teacher_difficulties || [];
+                    if (result.is_approved == 1 && teacherDifficulties.length === 0) {
+                        teacherDifficulties = await loadAvailableTeacherDifficulties(result.teacher_id);
+                    }
+                    renderTeacherDifficulties(teacherDifficulties, result.is_approved == 1);
 
                     if (result.data.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">目前尚無任何遊玩紀錄</td></tr>';
@@ -103,7 +119,7 @@
 
                     result.data.forEach(record => {
                         const tr = document.createElement('tr');
-                        let diffText = record.difficulty == 0 ? '簡單' : record.difficulty == 1 ? '普通' : '困難';
+                        let diffText = record.difficulty_name || (record.difficulty == 0 ? '簡單' : record.difficulty == 1 ? '普通' : '困難');
                         let reasonColor = record.end_reason === 'SUCCESS' ? '#00ff00' : '#ff4444';
 
                         tr.innerHTML = `
@@ -118,7 +134,69 @@
                 }
             } catch (error) {
                 console.error("載入紀錄失敗:", error);
+                document.getElementById('difficulty-status-text').innerText = '教師難度載入失敗，請重新整理控制台。';
             }
+        }
+
+        async function loadAvailableTeacherDifficulties(teacherId) {
+            try {
+                const response = await fetch('../../api/student/get_game_data.php', { cache: 'no-store' });
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success') return [];
+
+                return Object.entries(result.difficulties || [])
+                    .filter(([, difficulty]) => !difficulty.isSystem)
+                    .filter(([, difficulty]) => difficulty.ownerUserId === null || difficulty.ownerUserId === Number(teacherId))
+                    .map(([diffId, difficulty]) => ({
+                        diff_id: Number(diffId),
+                        name: difficulty.name,
+                        description: difficulty.description,
+                        total_time: difficulty.time
+                    }));
+            } catch (error) {
+                console.error('重新載入教師難度失敗:', error);
+                return [];
+            }
+        }
+
+        function renderTeacherDifficulties(difficulties, isApproved) {
+            const select = document.getElementById('teacher-difficulty-select');
+            const button = document.getElementById('start-teacher-difficulty');
+            const status = document.getElementById('difficulty-status-text');
+            select.innerHTML = '';
+
+            if (!isApproved) {
+                select.innerHTML = '<option value="">請先完成教師綁定與核准</option>';
+                select.disabled = true;
+                button.disabled = true;
+                status.innerText = '目前教師關係尚未核准，暫時無法使用教師難度。';
+                return;
+            }
+
+            if (difficulties.length === 0) {
+                select.innerHTML = '<option value="">目前沒有啟用中的教師難度</option>';
+                select.disabled = true;
+                button.disabled = true;
+                status.innerText = '教師尚未建立啟用中的自訂難度。';
+                return;
+            }
+
+            difficulties.forEach(difficulty => {
+                const option = document.createElement('option');
+                option.value = difficulty.diff_id;
+                option.textContent = `${difficulty.name}（${difficulty.total_time} 秒）`;
+                if (difficulty.description) option.title = difficulty.description;
+                select.appendChild(option);
+            });
+            select.disabled = false;
+            button.disabled = false;
+            status.innerText = '選擇教師啟用的難度後開始訓練。';
+        }
+
+        function startTeacherDifficulty() {
+            const difficultyId = document.getElementById('teacher-difficulty-select').value;
+            if (!difficultyId) return;
+            window.location.href = `../../index.php?difficulty=${encodeURIComponent(difficultyId)}`;
         }
 
         async function applyTeacher() {
