@@ -892,6 +892,65 @@ body, html {
     overflow: hidden;
 }
 
+@media (max-width: 800px) {
+    #game-screen {
+        flex-direction: column;
+    }
+
+    #game-sidebar {
+        width: 100%;
+        flex: 0 0 auto;
+        border-right: 0;
+        border-bottom: 1px solid #1d2834;
+    }
+
+    .tab-menu {
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 4px;
+    }
+
+    .tab-btn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        padding: 10px 12px;
+        font-size: 0.85em;
+    }
+
+    .tab-btn.active {
+        border-left: 0;
+        border-bottom: 3px solid var(--terminal-green);
+    }
+
+    .quit-btn {
+        margin: 8px 12px 12px;
+    }
+
+    #tab-content-container {
+        min-height: calc(100vh - 150px);
+        overflow: visible;
+    }
+
+    .tab-content {
+        padding: 12px;
+    }
+
+    .monitor-grid,
+    .policy-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #threat-radar-panel,
+    #threat-radar-panel.collapsed {
+        left: 8px;
+        right: 8px;
+        top: 8px;
+        width: auto !important;
+        min-width: 0;
+        max-width: none;
+    }
+}
+
 #menu-screen.active ~ #threat-radar-panel {
     display: none;
 }
@@ -984,6 +1043,16 @@ body, html {
 #btn-collapse-radar:hover {
     color: #fff;
     transform: scale(1.1);
+}
+
+@media (max-width: 800px) {
+    #threat-radar-panel,
+    #threat-radar-panel.collapsed {
+        left: 8px;
+        right: 8px;
+        width: auto !important;
+        min-width: 0 !important;
+    }
 }
 
 /* =========================================

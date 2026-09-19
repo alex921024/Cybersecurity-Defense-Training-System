@@ -121,7 +121,7 @@
                 <h2><i class="fas fa-history"></i> 操作日誌回放 (SOP 檢視)</h2>
             </header>
             
-            <div style="display: flex; gap: 20px; height: calc(100vh - 180px); min-height: 400px;">
+            <div class="logs-layout" style="display: flex; gap: 20px; height: calc(100vh - 180px); min-height: 400px;">
                 <!-- 左側：歷史紀錄列表 -->
                 <div class="panel" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column;">
                     <h3 style="margin-top: 0;">最近遊戲紀錄</h3>
@@ -232,6 +232,25 @@
                         <tr><td colspan="6" style="text-align: center;">載入中...</td></tr>
                     </tbody>
                 </table>
+            </div>
+            <div class="panel catalog-panel">
+                <h3>VIP／正常業務 IP 完整清單</h3>
+                <div class="table-scroll"><table class="data-table"><thead><tr><th>ID</th><th>IP 位址</th><th>說明</th></tr></thead><tbody id="vip-catalog-body"><tr><td colspan="3">載入中...</td></tr></tbody></table></div>
+            </div>
+            <div class="panel catalog-panel">
+                <h3>郵件題庫完整清單</h3>
+                <form id="add-email-form" class="email-catalog-form" onsubmit="handleAddTrainingEmail(event)">
+                    <input id="email-sender" maxlength="100" required placeholder="寄件者">
+                    <input id="email-subject" maxlength="255" required placeholder="主旨">
+                    <select id="email-type"><option value="false">正常郵件</option><option value="true">釣魚郵件</option></select>
+                    <textarea id="email-content" maxlength="10000" required placeholder="郵件內容"></textarea>
+                    <button type="submit" class="btn-action btn-bind">新增郵件</button>
+                </form>
+                <div class="table-scroll"><table class="data-table"><thead><tr><th>ID</th><th>寄件者</th><th>主旨</th><th>類型</th><th>內容</th></tr></thead><tbody id="email-catalog-body"><tr><td colspan="5">載入中...</td></tr></tbody></table></div>
+            </div>
+            <div class="panel catalog-panel">
+                <h3>所有訓練難度與教師自訂難度</h3>
+                <div class="table-scroll"><table class="data-table"><thead><tr><th>ID</th><th>名稱</th><th>建立者</th><th>時間</th><th>攻擊政策</th><th>指令政策</th><th>狀態</th><th>操作</th></tr></thead><tbody id="difficulty-catalog-body"><tr><td colspan="8">載入中...</td></tr></tbody></table></div>
             </div>
         </section>
 
@@ -360,6 +379,7 @@
             }
             if (tabId === 'questions') {
                 loadThreatsAdmin();
+                loadContentCatalog();
             }
             if (tabId === 'audit') {
                 loadAuditLogs(1);
@@ -502,6 +522,9 @@
                 if (currentUserRole === 'admin' && user.role === 'student') {
                     actionButtons += `<button class="btn-action btn-upgrade" onclick="updateUser(${user.user_id}, 'upgrade_to_teacher')"><i class="fas fa-arrow-up"></i> 升級為教師</button>`;
                     actionButtons += `<button class="btn-action btn-view" onclick="viewStudentRecords(${user.user_id}, '${user.username}')"><i class="fas fa-chart-bar"></i> 查看狀況</button>`;
+                    actionButtons += `<button class="btn-action btn-bind" onclick="changeUserPassword(${user.user_id}, '${escapeHtml(user.username)}')"><i class="fas fa-key"></i> 修改密碼</button>`;
+                } else if (currentUserRole === 'admin' && user.role === 'teacher') {
+                    actionButtons += `<button class="btn-action btn-bind" onclick="changeUserPassword(${user.user_id}, '${escapeHtml(user.username)}')"><i class="fas fa-key"></i> 修改密碼</button>`;
                 } 
                 else if (currentUserRole === 'teacher' && user.role === 'student') {
                     if (!user.teacher_id) {
@@ -600,6 +623,38 @@
                 }
             } catch (error) { 
                 alert("網路錯誤！"); 
+            }
+        }
+
+        async function changeUserPassword(targetUserId, username) {
+            const password = prompt(`請輸入 ${username} 的新密碼（至少 8 個字元）：`);
+            if (password === null) return;
+            const confirmPassword = prompt('請再次輸入新密碼：');
+            if (confirmPassword === null) return;
+            if (password.length < 8) {
+                alert('密碼長度至少 8 個字元');
+                return;
+            }
+            if (password !== confirmPassword) {
+                alert('兩次輸入的密碼不一致');
+                return;
+            }
+
+            try {
+                const response = await fetch('../../api/admin/update_user.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: targetUserId,
+                        action: 'change_password',
+                        password,
+                        confirm_password: confirmPassword
+                    })
+                });
+                const result = await response.json();
+                alert(result.message);
+            } catch (error) {
+                alert('網路錯誤！');
             }
         }
 
@@ -872,6 +927,92 @@
                 }
             } catch (error) {
                 console.error("載入題庫失敗:", error);
+            }
+        }
+
+        async function loadContentCatalog() {
+            try {
+                const response = await fetch('../../api/admin/get_content_catalog.php');
+                const result = await response.json();
+                if (result.status !== 'success') throw new Error(result.message || '完整題庫載入失敗');
+                const data = result.data;
+                const vipBody = document.getElementById('vip-catalog-body');
+                const emailBody = document.getElementById('email-catalog-body');
+                const difficultyBody = document.getElementById('difficulty-catalog-body');
+                vipBody.innerHTML = data.vip_ips.map(item => `<tr><td>${item.ip_id}</td><td>${escapeHtml(item.ip_address)}</td><td>${escapeHtml(item.description || '-')}</td></tr>`).join('') || '<tr><td colspan="3">沒有資料</td></tr>';
+                emailBody.innerHTML = data.emails.map(item => `<tr><td>${item.email_id}</td><td>${escapeHtml(item.sender)}</td><td>${escapeHtml(item.subject)}</td><td>${item.is_malicious == 1 ? '釣魚' : '正常'}</td><td><details><summary>查看</summary><pre class="catalog-details">${escapeHtml(item.content)}</pre></details></td><td><button class="btn-action btn-unbind" onclick="deleteTrainingEmail(${item.email_id})">刪除</button></td></tr>`).join('') || '<tr><td colspan="6">沒有資料</td></tr>';
+                difficultyBody.innerHTML = data.difficulties.map(item => {
+                    const attacks = Object.entries(item.attack_policy || {}).filter(([, enabled]) => enabled).map(([key]) => key).join(', ') || '-';
+                    const commands = Object.entries(item.command_policy || {}).filter(([, enabled]) => enabled).map(([key]) => key).join(', ') || '-';
+                    const deleteButton = item.owner_user_id === null ? '' : `<button class="btn-action btn-unbind" onclick="deleteAdminDifficulty(${item.diff_id})">刪除</button>`;
+                    return `<tr><td>${item.diff_id}</td><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.owner_username || '系統預設')}</td><td>${item.total_time} 秒</td><td>${escapeHtml(attacks)}</td><td>${escapeHtml(commands)}</td><td>${item.is_active ? '啟用' : '停用'}</td><td><button class="btn-action ${item.is_active ? 'btn-unbind' : 'btn-bind'}" onclick="toggleAdminDifficulty(${item.diff_id}, ${!item.is_active})">${item.is_active ? '停用' : '啟用'}</button>${deleteButton}</td></tr>`;
+                }).join('') || '<tr><td colspan="7">沒有資料</td></tr>';
+            } catch (error) {
+                ['vip-catalog-body', 'email-catalog-body', 'difficulty-catalog-body'].forEach(id => {
+                    const body = document.getElementById(id);
+                    if (body) body.innerHTML = `<tr><td colspan="7" style="color:#f85149;">${escapeHtml(error.message)}</td></tr>`;
+                });
+            }
+        }
+
+        async function handleAddTrainingEmail(event) {
+            event.preventDefault();
+            const payload = {
+                sender: document.getElementById('email-sender').value.trim(),
+                subject: document.getElementById('email-subject').value.trim(),
+                content: document.getElementById('email-content').value.trim(),
+                is_malicious: document.getElementById('email-type').value === 'true'
+            };
+            try {
+                const response = await fetch('../../api/admin/manage_emails.php', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') { document.getElementById('add-email-form').reset(); loadContentCatalog(); }
+            } catch (error) { alert('網路連線錯誤！'); }
+        }
+
+        async function deleteTrainingEmail(emailId) {
+            if (!confirm('確定要刪除此郵件題目嗎？')) return;
+            try {
+                const response = await fetch('../../api/admin/manage_emails.php', {
+                    method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email_id: emailId })
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') loadContentCatalog();
+            } catch (error) { alert('網路連線錯誤！'); }
+        }
+
+        async function toggleAdminDifficulty(diffId, isActive) {
+            try {
+                const response = await fetch('../../api/admin/manage_difficulty_status.php', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ diff_id: diffId, is_active: isActive })
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') loadContentCatalog();
+            } catch (error) {
+                alert('網路連線錯誤！');
+            }
+        }
+
+        async function deleteAdminDifficulty(diffId) {
+            if (!confirm('確定要刪除此教師自訂難度嗎？')) return;
+            try {
+                const response = await fetch('../../api/admin/manage_difficulty_status.php', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ diff_id: diffId })
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') loadContentCatalog();
+            } catch (error) {
+                alert('網路連線錯誤！');
             }
         }
 

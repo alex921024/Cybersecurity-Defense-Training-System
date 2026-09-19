@@ -136,6 +136,7 @@ body {
 
 .data-table {
     width: 100%;
+    min-width: 560px;
     border-collapse: collapse;
     margin-top: 15px;
     color: var(--text-main);
@@ -222,6 +223,82 @@ body {
 
 @media (max-width: 800px) {
     .guide-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+.panel {
+    min-width: 0;
+}
+
+@media (max-width: 700px) {
+    body {
+        height: auto;
+        min-height: 100vh;
+        display: block;
+        overflow: visible;
+    }
+
+    .sidebar {
+        width: 100%;
+        box-sizing: border-box;
+        padding: 12px;
+        border-right: 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-header h2 {
+        margin: 0 0 6px;
+    }
+
+    .user-info {
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+    }
+
+    .menu {
+        flex-direction: row;
+        overflow-x: auto;
+        gap: 6px;
+    }
+
+    .menu-btn {
+        flex: 0 0 auto;
+        white-space: nowrap;
+        padding: 10px 12px;
+        font-size: 0.85em;
+    }
+
+    .logout-btn {
+        margin-top: 10px;
+    }
+
+    .main-content {
+        overflow: visible;
+    }
+
+    .topbar,
+    .content-area {
+        padding: 16px;
+    }
+
+    .topbar h2 {
+        font-size: 1.1em;
+    }
+
+    .panel {
+        padding: 14px;
+        overflow-x: hidden;
+    }
+
+    .data-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .guide-command-grid,
+    .guide-attack-grid {
         grid-template-columns: 1fr;
     }
 }

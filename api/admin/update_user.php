@@ -19,8 +19,39 @@ if (empty($action) || empty($target_user_id)) {
 }
 
 try {
+    // 動作 A：管理員修改教師或學生密碼
+    if ($action === 'change_password' && $my_role === 'admin') {
+        $password = (string) ($data['password'] ?? '');
+        $confirm_password = (string) ($data['confirm_password'] ?? '');
+
+        if (!validatePassword($password)) {
+            echo json_encode(["status" => "error", "message" => "密碼長度至少 8 個字元"]);
+            exit;
+        }
+        if ($password !== $confirm_password) {
+            echo json_encode(["status" => "error", "message" => "兩次輸入的密碼不一致"]);
+            exit;
+        }
+
+        $targetStmt = $pdo->prepare("SELECT username, role FROM users WHERE user_id = ? AND role IN ('teacher', 'student')");
+        $targetStmt->execute([$target_user_id]);
+        $targetUser = $targetStmt->fetch();
+        if (!$targetUser) {
+            echo json_encode(["status" => "error", "message" => "只能修改教師或學生帳號的密碼"]);
+            exit;
+        }
+
+        $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
+        $stmt = $pdo->prepare('UPDATE users SET password_hash = ? WHERE user_id = ?');
+        $stmt->execute([$passwordHash, $target_user_id]);
+        writeAuditLog($pdo, $session, 'change_user_password', $targetUser['username'], [
+            'target_user_id' => $target_user_id,
+            'target_role' => $targetUser['role']
+        ]);
+        echo json_encode(["status" => "success", "message" => "已成功修改該帳號密碼"]);
+    }
     // 動作 A：管理員將學生升級為教師
-    if ($action === 'upgrade_to_teacher' && $my_role === 'admin') {
+    else if ($action === 'upgrade_to_teacher' && $my_role === 'admin') {
         $stmt = $pdo->prepare("UPDATE users SET role = 'teacher', teacher_id = NULL WHERE user_id = ? AND role = 'student'");
         $stmt->execute([$target_user_id]);
         writeAuditLog($pdo, $session, 'upgrade_student_to_teacher', null, ['target_user_id' => $target_user_id]);

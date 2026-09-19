@@ -36,8 +36,8 @@
             <!-- 導師綁定區塊 -->
             <div class="panel" style="margin-bottom: 20px;">
                 <h3>導師管理申請</h3>
-                <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
-                    <input type="text" id="teacher-input" placeholder="請輸入教師帳號名稱 (例如: TEACHER)" style="padding: 8px; width: 300px; background: #050b14; border: 1px solid #1f2c3a; color: #fff; border-radius: 4px;">
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px;">
+                    <input type="text" id="teacher-input" placeholder="請輸入教師帳號名稱 (例如: TEACHER)" style="padding: 8px; width: min(300px, 100%); box-sizing: border-box; background: #050b14; border: 1px solid #1f2c3a; color: #fff; border-radius: 4px;">
                     <button onclick="applyTeacher()" style="padding: 8px 15px; background: #00ebff; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">送出綁定申請</button>
                 </div>
                 <p id="teacher-status-text" style="font-size: 0.9em; color: #a7b8d6; margin-top: 8px;"></p>
@@ -46,7 +46,7 @@
             <div class="panel" style="margin-bottom: 20px;">
                 <h3>教師訓練難度</h3>
                 <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px; flex-wrap: wrap;">
-                    <select id="teacher-difficulty-select" disabled style="min-width: 300px; padding: 8px; background: #050b14; border: 1px solid #1f2c3a; color: #fff; border-radius: 4px;">
+                    <select id="teacher-difficulty-select" disabled style="min-width: min(300px, 100%); max-width: 100%; padding: 8px; background: #050b14; border: 1px solid #1f2c3a; color: #fff; border-radius: 4px;">
                         <option value="">請先完成教師綁定與核准</option>
                     </select>
                     <button id="start-teacher-difficulty" onclick="startTeacherDifficulty()" disabled style="padding: 8px 15px; background: #00ebff; border: none; font-weight: bold; border-radius: 4px; cursor: pointer;">開始此難度</button>
