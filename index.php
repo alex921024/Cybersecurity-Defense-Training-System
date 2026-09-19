@@ -210,9 +210,9 @@ header('Content-Type: text/html; charset=utf-8');
                         <div class="chart-footer">負載: <span id="ram-load">0</span>%</div>
                     </div>
                     <div class="chart-box danger-box">
-                        <div class="chart-header"><span style="color: #FF3333;">密碼破解進度</span><span class="live-indicator danger-pulse"></span></div>
+                        <div class="chart-header"><span style="color: #FF3333;">字典破解進度</span><span class="live-indicator danger-pulse"></span></div>
                         <div class="chart-body"><canvas id="hackChart"></canvas></div>
-                        <div class="chart-footer" style="color: #FF3333;">進度: <span id="crack-progress">0</span>%</div>
+                        <div class="chart-footer" style="color: #FF3333;">進度: <span id="crack-progress">0</span>%<span id="dictionary-crack-stage" style="display:block; color:#ffaaa5; font-size:0.8em;">等待開始</span></div>
                     </div>
                 </div>
             </div>

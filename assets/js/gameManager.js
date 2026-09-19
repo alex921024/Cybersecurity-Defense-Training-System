@@ -880,7 +880,19 @@ class GameManager {
     updateUI() {
         const updateColor = (id, val) => { const el = document.getElementById(id); if (el) { el.innerText = Math.floor(val); el.className = val > 80 ? "danger" : val > 60 ? "warning" : "safe"; } };
         updateColor('cpu-load', this.status.cpu); updateColor('gpu-load', this.status.gpu); updateColor('ram-load', this.status.ram);
-        const crackEl = document.getElementById('crack-progress'); if (crackEl) crackEl.innerText = Math.floor(this.status.crackProgress);
+        const crackProgress = Math.floor(this.status.crackProgress);
+        const crackEl = document.getElementById('crack-progress'); if (crackEl) crackEl.innerText = crackProgress;
+        const crackStageEl = document.getElementById('dictionary-crack-stage');
+        if (crackStageEl) {
+            const dictionaryEnabled = this.gameSettings.dictionary_attack?.enabled !== false && this.isAttackEnabled('crack');
+            crackStageEl.innerText = !dictionaryEnabled
+                ? '字典破解已停用'
+                : crackProgress >= 80
+                    ? '字典匹配：高風險，接近完成'
+                    : crackProgress >= 40
+                        ? '字典匹配：正在嘗試常見模式'
+                        : '字典匹配：分析中';
+        }
         const timerEl = document.getElementById('timer'); if (timerEl) timerEl.innerText = this.status.timer;
     }
 
