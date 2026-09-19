@@ -26,6 +26,7 @@
             <button class="menu-btn active" onclick="switchTab('users', this)"><i class="fas fa-users"></i> 帳號清單與審核</button>
             <button class="menu-btn" onclick="switchTab('analytics', this)"><i class="fas fa-chart-line"></i> 訓練成效分析</button>
             <button class="menu-btn" onclick="switchTab('logs', this)"><i class="fas fa-history"></i> 操作日誌回放</button>
+            <button class="menu-btn admin-only" style="display:none;" onclick="switchTab('audit', this)"><i class="fas fa-shield-alt"></i> 稽核紀錄中心</button>
             <button class="menu-btn teacher-only" style="display:none;" onclick="switchTab('difficulties', this)"><i class="fas fa-sliders-h"></i> 我的訓練難度</button>
             <button class="menu-btn admin-only" style="display:none;" onclick="switchTab('questions', this)"><i class="fas fa-database"></i> 動態題庫管理</button>
         </nav>
@@ -40,8 +41,42 @@
             <header class="topbar" style="margin: -30px -30px 20px -30px; padding: 20px 30px;">
                 <h2><i class="fas fa-users"></i> 帳號清單與導師審核</h2>
             </header>
+            <div id="admin-overview-cards" class="overview-grid" style="display:none;"></div>
+            <div class="panel console-guide-panel" style="margin-bottom: 20px;">
+                <h3>管理員訓練管理速查</h3>
+                <div class="guide-columns">
+                    <div><h4>教師與學生管理 SOP</h4><ol>
+                        <li>確認學生帳號與教師綁定狀態。</li>
+                        <li>核准前先確認申請者身分與所屬教師。</li>
+                        <li>教師建立難度後，確認指令、攻擊、密碼政策與字典破解設定。</li>
+                        <li>使用稽核紀錄中心確認升級、綁定、審核與題庫操作。</li>
+                    </ol></div>
+                    <div><h4>攻擊教材檢核</h4><ul>
+                        <li><strong>TCP／UDP／ICMP：</strong>確認學生能執行 <code>status</code>、<code>netstat</code>、<code>whois</code>，再限速與精準封鎖。</li>
+                        <li><strong>DNS：</strong>確認流程為 <code>whois dns</code> → <code>flush-dns</code>。</li>
+                        <li><strong>密碼破解：</strong>檢查最低長度、字典破解開關與更換冷卻。</li>
+                        <li><strong>釣魚郵件：</strong>確認學生使用 <code>scan-mail</code>，而不是點擊或回覆。</li>
+                    </ul></div>
+                </div>
+            </div>
             <div class="panel">
                 <h3>系統成員與綁定申請列表</h3>
+                <form id="user-filter-form" class="user-filter-form" onsubmit="loadUserList(1); return false;">
+                    <input id="user-keyword" type="search" placeholder="搜尋帳號名稱">
+                    <select id="user-role-filter">
+                        <option value="">全部角色</option>
+                        <option value="student">學生</option>
+                        <option value="teacher">教師</option>
+                    </select>
+                    <select id="user-approval-filter">
+                        <option value="">全部審核狀態</option>
+                        <option value="0">待審核</option>
+                        <option value="1">已核准</option>
+                    </select>
+                    <button type="submit" class="btn-action btn-bind"><i class="fas fa-search"></i> 搜尋</button>
+                    <button type="button" class="btn-action btn-view" onclick="resetUserFilters()"><i class="fas fa-undo"></i> 清除</button>
+                </form>
+                <div id="user-list-summary" class="audit-summary">尚未載入</div>
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -56,6 +91,11 @@
                         <tr><td colspan="5" style="text-align: center;">資料載入中...</td></tr>
                     </tbody>
                 </table>
+                <div class="audit-pagination">
+                    <button id="user-prev" class="btn-action btn-view" type="button" onclick="loadUserList(userPage - 1)" disabled>上一頁</button>
+                    <span id="user-page-label">第 0 / 0 頁</span>
+                    <button id="user-next" class="btn-action btn-view" type="button" onclick="loadUserList(userPage + 1)" disabled>下一頁</button>
+                </div>
             </div>
         </section>
 
@@ -112,6 +152,35 @@
             </div>
         </section>
 
+        <!-- ================= 管理員稽核紀錄分頁 ================= -->
+        <section id="tab-audit" class="content-area tab-section">
+            <header class="topbar" style="margin: -30px -30px 20px -30px; padding: 20px 30px;">
+                <h2><i class="fas fa-shield-alt"></i> 稽核紀錄中心</h2>
+            </header>
+            <div class="panel">
+                <form id="audit-filter-form" class="audit-filter-form" onsubmit="loadAuditLogs(1); return false;">
+                    <input id="audit-keyword" type="search" placeholder="操作者、目標帳號、IP 或操作類型">
+                    <input id="audit-action" type="text" maxlength="50" placeholder="操作類型，例如 create_threat_ip">
+                    <label>起始日<input id="audit-from" type="date"></label>
+                    <label>結束日<input id="audit-to" type="date"></label>
+                    <button type="submit" class="btn-action btn-bind"><i class="fas fa-search"></i> 查詢</button>
+                    <button type="button" class="btn-action btn-view" onclick="resetAuditFilters()"><i class="fas fa-undo"></i> 清除</button>
+                </form>
+                <div class="audit-summary" id="audit-summary">尚未載入稽核紀錄</div>
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead><tr><th>時間</th><th>操作者</th><th>操作</th><th>目標</th><th>IP</th><th>詳情</th></tr></thead>
+                        <tbody id="audit-table-body"><tr><td colspan="6" style="text-align:center;">尚未載入</td></tr></tbody>
+                    </table>
+                </div>
+                <div class="audit-pagination">
+                    <button id="audit-prev" class="btn-action btn-view" type="button" onclick="loadAuditLogs(auditPage - 1)" disabled>上一頁</button>
+                    <span id="audit-page-label">第 0 / 0 頁</span>
+                    <button id="audit-next" class="btn-action btn-view" type="button" onclick="loadAuditLogs(auditPage + 1)" disabled>下一頁</button>
+                </div>
+            </div>
+        </section>
+
         <!-- ================= 動態題庫管理分頁 ================= -->
         <section id="tab-questions" class="content-area tab-section">
             <header class="topbar" style="margin: -30px -30px 20px -30px; padding: 20px 30px;">
@@ -156,10 +225,11 @@
                             <th>攻擊類型</th>
                             <th>封包特徵描述</th>
                             <th>狀態</th>
+                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="threat-table-body">
-                        <tr><td colspan="5" style="text-align: center;">載入中...</td></tr>
+                        <tr><td colspan="6" style="text-align: center;">載入中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -260,9 +330,12 @@
         let difficultyConfigs = [];
         let editingDifficultyId = null;
         let difficultyAssignmentData = { difficulties: [], students: [] };
+        let auditPage = 1;
+        let userPage = 1;
 
         document.addEventListener("DOMContentLoaded", async () => {
             await checkAuth();
+            await loadAdminOverview();
             await loadUserList();
             if (currentUserRole === 'teacher' && window.location.hash === '#difficulties') {
                 switchTab('difficulties', document.querySelector('.teacher-only'));
@@ -287,6 +360,9 @@
             }
             if (tabId === 'questions') {
                 loadThreatsAdmin();
+            }
+            if (tabId === 'audit') {
+                loadAuditLogs(1);
             }
             if (tabId === 'difficulties') {
                 loadDifficulties();
@@ -326,9 +402,16 @@
         // ==========================================
         // 3. 帳號清單與審核管理
         // ==========================================
-        async function loadUserList() {
+        async function loadUserList(page = 1) {
             try {
-                const response = await fetch('../../api/admin/get_users.php');
+            const params = new URLSearchParams({ page: String(Math.max(1, page)), limit: '25' });
+            const keyword = document.getElementById('user-keyword').value.trim();
+            const role = document.getElementById('user-role-filter').value;
+            const approval = document.getElementById('user-approval-filter').value;
+            if (keyword) params.set('keyword', keyword);
+            if (role) params.set('role', role);
+            if (approval) params.set('approval', approval);
+            const response = await fetch(`../../api/admin/get_users.php?${params}`);
                 const result = await response.json();
                 if (result.status === 'success') {
                     if (currentUserRole === 'teacher') {
@@ -342,11 +425,47 @@
                             console.error('載入難度分配資料失敗:', assignmentError);
                         }
                     }
+                    userPage = result.pagination?.page || 1;
                     renderTable(result.data);
+                    const pagination = result.pagination || { page: 1, pages: 0, total: result.data.length };
+                    document.getElementById('user-list-summary').innerText = `共 ${pagination.total} 個帳號`;
+                    document.getElementById('user-page-label').innerText = `第 ${pagination.pages ? pagination.page : 0} / ${pagination.pages || 0} 頁`;
+                    document.getElementById('user-prev').disabled = pagination.page <= 1;
+                    document.getElementById('user-next').disabled = !pagination.pages || pagination.page >= pagination.pages;
                 }
             } catch (error) { 
                 console.error("載入名單失敗:", error); 
             }
+        }
+
+        async function loadAdminOverview() {
+            if (currentUserRole !== 'admin') return;
+            try {
+                const response = await fetch('../../api/admin/get_overview.php');
+                const result = await response.json();
+                if (result.status !== 'success') return;
+                const labels = [
+                    ['students', '學生帳號', 'fas fa-user-graduate'],
+                    ['teachers', '教師帳號', 'fas fa-chalkboard-teacher'],
+                    ['pending_approvals', '待審核申請', 'fas fa-user-clock'],
+                    ['active_threats', '啟用威脅', 'fas fa-bug'],
+                    ['active_difficulties', '啟用難度', 'fas fa-sliders-h'],
+                    ['today_records', '今日訓練', 'fas fa-gamepad'],
+                    ['success_rate_30d', '30 日成功率', 'fas fa-chart-line']
+                ];
+                const container = document.getElementById('admin-overview-cards');
+                container.innerHTML = labels.map(([key, label, icon]) => `
+                    <div class="overview-card"><i class="${icon}"></i><span>${label}</span><strong>${result.data[key]}${key === 'success_rate_30d' ? '%' : ''}</strong></div>
+                `).join('');
+                container.style.display = 'grid';
+            } catch (error) {
+                console.error('載入管理員總覽失敗:', error);
+            }
+        }
+
+        function resetUserFilters() {
+            document.getElementById('user-filter-form').reset();
+            loadUserList(1);
         }
 
         function renderTable(users) {
@@ -371,7 +490,7 @@
                 if (user.role === 'student') {
                     if (user.teacher_id == currentUserId) {
                         if (user.is_approved == 0) {
-                            statusText = "<span style='color:#ffaa00; font-weight:bold;'>⚠️ 申請加入中 (待審核)</span>";
+                            statusText = "<span style='color:#ffaa00; font-weight:bold;'>待審核：申請加入中</span>";
                         } else {
                             statusText = "<span style='color:#00FF00;'>您管理中</span>";
                         }
@@ -635,7 +754,7 @@
                 const logs = JSON.parse(record.action_logs);
                 
                 if (!logs || logs.length === 0) {
-                    terminal.innerHTML += `<div style="color: #ff4444; margin-top: 10px;">[警告] 該玩家在此局遊戲中未輸入任何防禦指令。</div>`;
+                    terminal.innerHTML += `<div style="color: #ff4444; margin-top: 10px;">警告：該玩家在此局遊戲中未輸入任何防禦指令。</div>`;
                     return;
                 }
 
@@ -652,12 +771,71 @@
                 terminal.scrollTop = terminal.scrollHeight;
                 
             } catch (e) {
-                terminal.innerHTML += `<div style="color: #ff4444;">[錯誤] 日誌資料解析失敗。</div>`;
+                terminal.innerHTML += `<div style="color: #ff4444;">錯誤：日誌資料解析失敗。</div>`;
             }
         }
 
         // ==========================================
-        // 6. 動態題庫管理邏輯 (管理員專用)
+        // 6. 管理員稽核紀錄中心
+        // ==========================================
+        async function loadAuditLogs(page = 1) {
+            if (currentUserRole !== 'admin') return;
+            const params = new URLSearchParams({ page: String(Math.max(1, page)), limit: '25' });
+            const keyword = document.getElementById('audit-keyword').value.trim();
+            const actionType = document.getElementById('audit-action').value.trim();
+            const from = document.getElementById('audit-from').value;
+            const to = document.getElementById('audit-to').value;
+            if (keyword) params.set('keyword', keyword);
+            if (actionType) params.set('action_type', actionType);
+            if (from) params.set('from', from);
+            if (to) params.set('to', to);
+
+            const tbody = document.getElementById('audit-table-body');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">載入中...</td></tr>';
+            try {
+                const response = await fetch(`../../api/admin/get_audit_logs.php?${params}`);
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success') throw new Error(result.message || '稽核紀錄載入失敗');
+                auditPage = result.pagination.page;
+                renderAuditLogs(result.data || [], result.pagination);
+            } catch (error) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#f85149;">${escapeHtml(error.message)}</td></tr>`;
+                document.getElementById('audit-summary').innerText = '稽核紀錄載入失敗';
+            }
+        }
+
+        function renderAuditLogs(logs, pagination) {
+            const tbody = document.getElementById('audit-table-body');
+            tbody.innerHTML = '';
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">沒有符合條件的稽核紀錄</td></tr>';
+            }
+            logs.forEach(log => {
+                const details = log.details ? JSON.stringify(log.details, null, 2) : '-';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${escapeHtml(log.created_at)}</td>
+                    <td>${escapeHtml(log.operator_username || `ID ${log.operator_id || '-'}`)}</td>
+                    <td><span class="badge badge-teacher">${escapeHtml(log.action_type)}</span></td>
+                    <td>${escapeHtml(log.target_username || '-')}</td>
+                    <td>${escapeHtml(log.ip_address || '-')}</td>
+                    <td><details><summary>查看</summary><pre class="audit-details">${escapeHtml(details)}</pre></details></td>`;
+                tbody.appendChild(row);
+            });
+            const pages = pagination.pages || 0;
+            document.getElementById('audit-summary').innerText = `共 ${pagination.total} 筆紀錄`;
+            document.getElementById('audit-page-label').innerText = `第 ${pages ? pagination.page : 0} / ${pages} 頁`;
+            document.getElementById('audit-prev').disabled = pagination.page <= 1;
+            document.getElementById('audit-next').disabled = pages === 0 || pagination.page >= pages;
+        }
+
+        function resetAuditFilters() {
+            document.getElementById('audit-filter-form').reset();
+            loadAuditLogs(1);
+        }
+
+        // ==========================================
+        // 7. 動態題庫管理邏輯 (管理員專用)
         // ==========================================
         async function loadThreatsAdmin() {
             try {
@@ -669,7 +847,7 @@
                 
                 if (result.status === 'success') {
                     if (result.data.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">目前沒有任何題庫資料</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center;">目前沒有任何題庫資料</td></tr>';
                         return;
                     }
 
@@ -685,6 +863,9 @@
                             <td><span class="badge badge-teacher">${item.attack_type.toUpperCase()}</span></td>
                             <td style="color: #a7b8d6; font-size: 0.9em;">${item.payload_desc}</td>
                             <td>${statusBadge}</td>
+                            <td><button class="btn-action ${item.is_active == 1 ? 'btn-unbind' : 'btn-bind'}" onclick="toggleThreatStatus(${item.ip_id}, ${item.is_active != 1})">
+                                ${item.is_active == 1 ? '停用' : '啟用'}
+                            </button></td>
                         `;
                         tbody.appendChild(tr);
                     });
@@ -717,6 +898,21 @@
                 }
             } catch (error) {
                 alert("網路連線錯誤！");
+            }
+        }
+
+        async function toggleThreatStatus(ipId, isActive) {
+            try {
+                const response = await fetch('../../api/admin/manage_threats.php', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ip_id: ipId, is_active: isActive })
+                });
+                const result = await response.json();
+                alert(result.message);
+                if (result.status === 'success') loadThreatsAdmin();
+            } catch (error) {
+                alert('網路連線錯誤！');
             }
         }
 

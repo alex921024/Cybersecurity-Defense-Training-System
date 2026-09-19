@@ -29,11 +29,13 @@ try {
         // 同意申請：將 is_approved 設為 1
         $stmt = $pdo->prepare("UPDATE users SET is_approved = 1 WHERE user_id = ?");
         $stmt->execute([$student_id]);
+        writeAuditLog($pdo, $session, 'approve_student', null, ['student_id' => $student_id]);
         echo json_encode(["status" => "success", "message" => "已同意該學生的加入申請"]);
     } else if ($action === 'reject') {
         // 拒絕申請：將 teacher_id 設為 NULL，is_approved 設為 1
         $stmt = $pdo->prepare("UPDATE users SET teacher_id = NULL, is_approved = 1 WHERE user_id = ?");
         $stmt->execute([$student_id]);
+        writeAuditLog($pdo, $session, 'reject_student', null, ['student_id' => $student_id]);
         echo json_encode(["status" => "success", "message" => "已拒絕該學生的申請"]);
     } else {
         echo json_encode(["status" => "error", "message" => "無效的操作"]);

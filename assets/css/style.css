@@ -38,6 +38,51 @@ body, html {
     display: none !important;
 }
 
+.training-reference {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid #25314a;
+    background: #08111b;
+    color: #d4e4f5;
+}
+
+.training-reference h3 {
+    color: #00ebff;
+    border-bottom: 1px solid #25314a;
+    padding-bottom: 8px;
+}
+
+.reference-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.reference-grid article {
+    padding: 12px;
+    border: 1px solid #26384c;
+    background: #0b141e;
+}
+
+.reference-grid h4 {
+    margin: 0 0 8px;
+    color: #ffaa00;
+}
+
+.reference-grid p {
+    margin: 6px 0;
+    color: #b8c7de;
+    line-height: 1.55;
+}
+
+.reference-grid code {
+    color: #00ebff;
+}
+
+.attack-reference article {
+    border-left: 3px solid #f85149;
+}
+
 .password-setup-box,
 .password-panel {
     display: grid;
@@ -70,6 +115,35 @@ body, html {
     background: #050b14;
     color: #fff;
     font-family: inherit;
+}
+
+.password-input-row {
+    display: flex;
+    gap: 6px;
+}
+
+.password-input-row input {
+    flex: 1;
+}
+
+.password-toggle {
+    min-width: 52px;
+    border: 1px solid #58a6ff;
+    border-radius: 4px;
+    background: #132239;
+    color: #e8f8ff;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.password-toggle:hover {
+    background: #1f4f7a;
+}
+
+.password-mismatch {
+    min-height: 1.2em;
+    color: #ff8b86;
+    font-weight: bold;
 }
 
 .password-form-grid {
@@ -165,7 +239,7 @@ body, html {
 .tab-btn {
     background: transparent;
     border: none;
-    color: #888;
+    color: #c9d1d9;
     padding: 15px 20px;
     text-align: left;
     font-family: inherit;
@@ -401,7 +475,7 @@ body, html {
     height: 86px;
     overflow-y: auto;
     white-space: pre-wrap;
-    color: #ffd16c;
+    color: #ffe08a;
 }
 
 .policy-grid {
@@ -609,7 +683,7 @@ body, html {
     border-right: 1px solid #1e2c3f;
     overflow-y: auto;
     background: #111a26;
-    color: #d8e8ff;
+    color: #f0f6fc;
 }
 
 .mail-item {
@@ -628,7 +702,7 @@ body, html {
 .mail-item.read {
     background: #0f1722;
     border-left: 4px solid transparent;
-    color: #b8c7de;
+    color: #d8e8ff;
 }
 
 .mail-item:hover {
@@ -650,15 +724,34 @@ body, html {
 
 .mail-badge.normal {
     background: rgba(0, 176, 255, 0.1);
-    color: #7cc8ff;
-    border: 1px solid rgba(0, 176, 255, 0.25);
+    color: #a8ddff;
+    border: 1px solid #43b9ff;
+}
+
+.mail-status {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.mail-status.phishing {
+    background: #3a161b;
+    color: #ffaaa5;
+    border: 1px solid #f85149;
+}
+
+.mail-status.normal {
+    background: #102b3d;
+    color: #b9e7ff;
+    border: 1px solid #43b9ff;
 }
 
 .mail-viewer {
     width: 65%;
     padding: 30px;
     background: #0d1725;
-    color: #d8e8ff;
+    color: #f0f6fc;
     overflow-y: auto;
 }
 
@@ -712,7 +805,7 @@ body, html {
 .manual-table td {
     padding: 12px;
     border: 1px solid #1f2c3f;
-    color: #d8e8ff;
+    color: #f0f6fc;
 }
 
 .manual-table code {
@@ -1076,7 +1169,7 @@ body, html { background-color: var(--bg-color); color: #f0f6fc; }
 .manual-table th { background: #21262d; color: var(--win11-blue); border-color: var(--border-color); }
 .manual-table td { border-color: var(--border-color); }
 .btn-click, .btn-bind { background: var(--win11-blue); }
-.btn-delete, .game-toast.danger, .mail-warning { color: var(--danger-red) !important; }
+.game-toast.danger, .mail-warning { color: var(--danger-red) !important; }
 .game-toast { background: rgba(13, 17, 23, 0.92); }
 .game-toast.success { border-left-color: var(--terminal-green); color: var(--terminal-green); text-shadow: none; }
 .intel-tag { background: rgba(248, 81, 73, 0.1); color: var(--danger-red); border-color: var(--danger-red); }

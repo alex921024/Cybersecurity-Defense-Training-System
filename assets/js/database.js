@@ -27,14 +27,14 @@ const GameDB = {
             { sender: "HR 部門", subject: "本月出勤紀錄確認", content: "請同仁至差勤系統確認本月打卡紀錄是否有誤，若有請假未簽核請盡速處理。" },
             { sender: "IT Support", subject: "系統例行維護通知", content: "伺服器將於本週五晚間進行系統升級，屆時內部網路將中斷 15 分鐘，請見諒。" },
             { sender: "總務處", subject: "下午茶訂購統計", content: "各位同仁好，今天的下午茶是雞排配珍奶，請要訂購的同仁於下午兩點前至總務處登記。" },
-            { sender: "系統自動通知", subject: "[成功] DB-01 每日備份報告", content: "系統排程通知：\n昨晚的資料庫排程備份已成功完成，共計 45GB，無錯誤日誌產生。" },
+            { sender: "系統自動通知", subject: "成功：DB-01 每日備份報告", content: "系統排程通知：\n昨晚的資料庫排程備份已成功完成，共計 45GB，無錯誤日誌產生。" },
             { sender: "行銷部_林專員", subject: "Q3 行銷活動企劃書初稿", content: "各位好，附件是下季度的企劃書草案，請大家在週三前提供修改建議，我們預計週五開會討論。" },
             { sender: "AWS Billing", subject: "Amazon Web Services Invoice Available", content: "您本月的 AWS 服務帳單已結算，總計 $450.00 USD，款項將於三日內從系統預設之信用卡扣除。" },
             { sender: "法務部", subject: "員工保密協議 (NDA) 條款更新", content: "配合最新個資法規範，公司已更新內部保密協議。請同仁有空時至內網 EIP 系統詳閱新版條款。" },
             { sender: "研發部_張經理", subject: "專案開發進度週報", content: "本週進度符合預期，前端 UI 已經完成 80%，後端 API 正在進行壓力測試，感謝各位的努力。" }
         ],
         malicious: [
-            { sender: "IT_Admin (外部)", subject: "[警告] 您的網域密碼即將過期", content: "系統偵測到您的密碼將在 24 小時內過期。\n\n請立即點擊以下連結進行重置：\nhttp://sec-update-portal-login.com/reset\n\n若未完成，您的帳號將被永久凍結。" },
+            { sender: "IT_Admin (外部)", subject: "警告：您的網域密碼即將過期", content: "系統偵測到您的密碼將在 24 小時內過期。\n\n請立即點擊以下連結進行重置：\nhttp://sec-update-portal-login.com/reset\n\n若未完成，您的帳號將被永久凍結。" },
             { sender: "Apple_Support_Team", subject: "Apple ID 異常登入警告", content: "我們偵測到您的帳號在海外有異常登入嘗試。\n\n請回覆此郵件，並附上您的身分證件照片與原密碼以解鎖帳號。" },
             { sender: "財務部_王經理", subject: "RE: 2026年度財務報表 (機密)", content: "附件是今年的財務報表與員工薪資清單，請點擊連結下載查看：\nhttp://download-finance-report-2026.zip.exe \n\n請勿外流。" },
             { sender: "總經理 (CEO)", subject: "急件！匯款指示 (人在外開會)", content: "我現在在外面與客戶開會，不方便接電話。\n\n請立刻幫我匯款 $15,000 美金到這個合作夥伴的帳戶，這是急件！匯款帳戶詳情請點擊下方連結確認：\nhttp://ceo-urgent-transfer-auth.com/doc" },

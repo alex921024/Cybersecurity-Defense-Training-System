@@ -32,13 +32,13 @@ class CLIModule {
 
             case 'netstat':
                 if (this.gm.activeThreat === "syn" || this.gm.activeThreat === "udp" || this.gm.activeThreat === "icmp") {
-                    return `[警告] 發現大量異常連線 (協定: ${this.gm.activeThreat.toUpperCase()}) 來自 103.24.55.12\n建議立即使用 'whois' 進行分析。`;
+                    return `發現大量異常連線 (協定: ${this.gm.activeThreat.toUpperCase()}) 來自 103.24.55.12\n建議立即使用 'whois' 進行分析。`;
                 }
                 if (this.gm.activeThreat === "dns") {
-                    return `[警告] 網路連線顯示 DNS 流量異常，疑似放大攻擊。請使用 'whois dns' 或 'flush-dns' 檢查。`;
+                    return `網路連線顯示 DNS 流量異常，疑似放大攻擊。請使用 'whois dns' 或 'flush-dns' 檢查。`;
                 }
                 if (this.gm.activeThreat === "fishing") {
-                    return `[警告] 網路連線正常，但 IDS 監測到社交工程攻擊。請檢查收件匣或使用 'scan-mail'。`;
+                    return `網路連線正常，但 IDS 監測到社交工程攻擊。請檢查收件匣或使用 'scan-mail'。`;
                 }
                 return "網路連線正常，無異常。";
 

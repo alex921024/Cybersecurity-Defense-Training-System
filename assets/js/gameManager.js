@@ -628,7 +628,7 @@ class GameManager {
         if (hasActive) {
             html += `<div style="margin-bottom: 12px;">
                         <button onclick="window.gameManagerInstance.blockAllActive()" style="background: #d93025; color: #fff; border: 1px solid #ff4444; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; width: 100%; transition: 0.2s;">
-                            <i class="fas fa-ban"></i> ⚠️ 一鍵封鎖所有已分析危險 IP
+                            <i class="fas fa-ban"></i> 一鍵封鎖所有已分析危險 IP
                         </button>
                      </div>`;
         }
@@ -747,7 +747,6 @@ class GameManager {
             div.onclick = () => this.viewMail(mail.id);
             div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
                     <strong>${mail.sender}</strong>
-                    ${mail.isMalicious ? '<span class="mail-badge phishing">🚨 釣魚</span>' : '<span class="mail-badge normal">📩 正常</span>'}
                 </div>
                 <div style="font-size:0.9em; color:#c1d5ff;">${mail.subject}</div>
                 <div style="font-size:0.8em; color:#888; margin-top:6px;">${timeWarning.trim()}</div>`;
@@ -764,11 +763,11 @@ class GameManager {
         this.renderMailList();
         const viewer = document.getElementById('mail-viewer-container');
         if (viewer) viewer.innerHTML = `
-            <div class="mail-header"><h3>${mail.subject}</h3><p><strong>寄件者:</strong> ${mail.sender}</p>${mail.isMalicious ? '<p style="color:#ff7b72; font-weight:bold; margin:8px 0 0 0;">⚠️ 此郵件疑似釣魚或惡意攻擊，請勿直接回覆或點擊連結。</p>' : ''}</div>
+            <div class="mail-header"><h3>${mail.subject}</h3><p><strong>寄件者:</strong> ${mail.sender}</p></div>
             <div class="mail-body"><p>${mail.content.replace(/\n/g, '<br>')}</p></div>
             <div class="mail-actions">
-                <button class="btn-delete" onclick="window.handleMail(${mail.id}, 'delete')">🗑️ 刪除信件 (安全)</button>
-                <button class="btn-click" onclick="window.handleMail(${mail.id}, 'click')">🔗 點擊連結 / 回覆 (執行)</button>
+                <button class="btn-delete" onclick="window.handleMail(${mail.id}, 'delete')">刪除信件 (安全)</button>
+                <button class="btn-click" onclick="window.handleMail(${mail.id}, 'click')">點擊連結 / 回覆 (執行)</button>
             </div>`;
     }
 
@@ -813,7 +812,7 @@ class GameManager {
         this.isPacketPaused = !this.isPacketPaused;
         const btn = document.getElementById('btn-pause-packet');
         if (btn) {
-            btn.innerText = this.isPacketPaused ? "▶️ 繼續擷取" : "⏸️ 暫停擷取";
+            btn.innerText = this.isPacketPaused ? "繼續擷取" : "暫停擷取";
             btn.style.background = this.isPacketPaused ? "#00ff00" : "#ff9900";
         }
         if (!this.isPacketPaused) this.renderPackets();
@@ -873,12 +872,12 @@ class GameManager {
                 const payloadContent = document.getElementById('packet-payload-content');
                 if (payloadContent) {
                     let hint = "";
-                    if (p.isAttack && p.len > 1000) hint = ' <span style="color:#ff4444; font-weight:bold;">⚠️ (長度異常)</span>';
+                    if (p.isAttack && p.len > 1000) hint = ' <span style="color:#ff4444; font-weight:bold;">長度異常</span>';
                     payloadContent.innerHTML = `
 <div style="margin-bottom: 10px; display: flex; align-items: center;">
     <span style="color:#aaa;">[來源 IP]</span> 
     <span onclick="quickAnalyze('${p.srcIP}')" style="cursor:pointer; background:#ffcc00; padding:2px 8px; border-radius:3px; color:#000; font-weight:bold; font-size:12px; box-shadow: 0 0 5px rgba(255, 204, 0, 0.6); display:inline-block; width: fit-content; margin-left: 8px;">
-        ${p.srcIP} 🖱️ 分析
+        ${p.srcIP} [分析]
     </span>${hint}
 </div>
 <div style="margin-bottom: 4px;"><span style="color:#aaa;">[目標埠口]</span> <span style="color:#fff;">${p.destPort}</span></div>
@@ -923,10 +922,10 @@ class GameManager {
     async endGame(reason) {
         clearInterval(this.interval);
         const results = {
-            "SUCCESS": { title: "🎉 任務成功", desc: "伺服器安全撐過指定時間，您完美守護了系統！", color: "#00FF00" },
-            "FAILURE_RESOURCE": { title: "💥 任務失敗", desc: "防禦失敗：硬體負載達 100% 崩潰！", color: "#FF4444" },
-            "FAILURE_CRACKED": { title: "💀 任務失敗", desc: "防禦失敗：密碼已被破解或客訴過多導致信任崩潰！", color: "#FF4444" },
-            "FAILURE_OVERLOAD": { title: "⚠️ 任務失敗", desc: "防禦失敗：系統負載未能降至 75% 以下。", color: "#FFA500" }
+            "SUCCESS": { title: "任務成功", desc: "伺服器安全撐過指定時間，您完美守護了系統！", color: "#00FF00" },
+            "FAILURE_RESOURCE": { title: "任務失敗", desc: "防禦失敗：硬體負載達 100% 崩潰！", color: "#FF4444" },
+            "FAILURE_CRACKED": { title: "任務失敗", desc: "防禦失敗：密碼已被破解或客訴過多導致信任崩潰！", color: "#FF4444" },
+            "FAILURE_OVERLOAD": { title: "任務失敗", desc: "防禦失敗：系統負載未能降至 75% 以下。", color: "#FFA500" }
         };
 
         // 1. 計算存活時間與最終分數
@@ -948,9 +947,9 @@ class GameManager {
                     action_logs: this.actionLogs || []
                 })
             });
-            console.log("✅ 遊戲紀錄已成功傳送至資料庫");
+            console.log("遊戲紀錄已成功傳送至資料庫");
         } catch (error) {
-            console.error("❌ 存檔失敗:", error);
+            console.error("存檔失敗:", error);
         }
 
         this.gamePassword = '';
@@ -994,7 +993,7 @@ class GameManager {
     showNotification(message, type = 'danger') {
         let container = document.getElementById('game-notification-container');
         if (!container) { container = document.createElement('div'); container.id = 'game-notification-container'; document.getElementById('game-screen').appendChild(container); }
-        const toast = document.createElement('div'); toast.className = `game-toast ${type}`; toast.innerHTML = `<strong>${type === 'success' ? '[系統]' : '[警告]'}</strong> ${message}`;
+        const toast = document.createElement('div'); toast.className = `game-toast ${type}`; toast.innerHTML = `<strong>系統</strong> ${message}`;
         container.appendChild(toast); setTimeout(() => { toast.classList.add('toast-fade-out'); setTimeout(() => toast.remove(), 500); }, 3000);
     }
 

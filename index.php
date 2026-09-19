@@ -42,17 +42,17 @@ header('Content-Type: text/html; charset=utf-8');
         <aside id="game-sidebar">
             <div class="sidebar-header">防禦中心</div>
             <nav class="tab-menu">
-                <button class="tab-btn active" onclick="switchTab(event, 'tab-firewall')">🛡️ 監控與控制台</button>
-                <button class="tab-btn" onclick="switchTab(event, 'tab-status')">📈 系統狀態</button>
-                <button class="tab-btn" onclick="switchTab(event, 'tab-mailbox')">📧 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">0</span></button>
-                <button class="tab-btn" onclick="switchTab(event, 'tab-manual')">📘 指令手冊</button>
+                <button class="tab-btn active" onclick="switchTab(event, 'tab-firewall')"><i class="fas fa-shield-alt"></i> 監控與控制台</button>
+                <button class="tab-btn" onclick="switchTab(event, 'tab-status')"><i class="fas fa-chart-line"></i> 系統狀態</button>
+                <button class="tab-btn" onclick="switchTab(event, 'tab-mailbox')"><i class="fas fa-inbox"></i> 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">0</span></button>
+                <button class="tab-btn" onclick="switchTab(event, 'tab-manual')"><i class="fas fa-book"></i> 指令手冊</button>
             </nav>
             <button class="quit-btn" onclick="quitGame()">放棄任務</button>
         </aside>
 
         <main id="tab-content-container">
             <div id="tab-firewall" class="tab-content active">
-                <h2 class="tab-title" style="margin: 0 0 10px 0; font-size: 1.2em;">🛡️ SOC 即時防禦儀表板 (Monitoring & Terminal)</h2>
+                <h2 class="tab-title" style="margin: 0 0 10px 0; font-size: 1.2em;"><i class="fas fa-shield-alt"></i> SOC 即時防禦儀表板 (Monitoring & Terminal)</h2>
                 <div id="mission-panel" class="mission-panel">
                     <div class="mission-head">
                         <div>
@@ -77,7 +77,7 @@ header('Content-Type: text/html; charset=utf-8');
                             <div class="analysis-header" style="display: flex; justify-content: space-between; align-items: center;">
                                 <h3 style="margin:0;">即時流量監控 (Wireshark)</h3>
                                 <div>
-                                    <button id="btn-pause-packet" class="cmd-tag" style="background:#ff9900; color:#000; font-weight:bold; padding:6px 12px; margin-right: 10px;" onclick="togglePacketCapture()">⏸️ 暫停擷取</button>
+                                    <button id="btn-pause-packet" class="cmd-tag" style="background:#ff9900; color:#000; font-weight:bold; padding:6px 12px; margin-right: 10px;" onclick="togglePacketCapture()">暫停擷取</button>
                                     <select id="protocol-filter">
                                         <option value="ALL">全部 (ALL)</option>
                                         <option value="TCP">TCP</option>
@@ -109,13 +109,19 @@ header('Content-Type: text/html; charset=utf-8');
                                 <input type="text" id="cmd-input" placeholder="輸入防禦指令..." autocomplete="off">
                             </div>
                             <div class="quick-commands">
+                                <span class="cmd-tag" onclick="quickCmd('help')">help</span>
                                 <span class="cmd-tag" onclick="quickCmd('status')">status</span>
+                                <span class="cmd-tag" onclick="quickCmd('ipconfig')">ipconfig</span>
+                                <span class="cmd-tag" onclick="quickCmd('ping 10.0.0.1')">ping</span>
                                 <span class="cmd-tag" onclick="quickCmd('netstat')">netstat</span>
                                 <span class="cmd-tag" onclick="quickCmd('whois udp')">whois udp</span>
                                 <span class="cmd-tag" onclick="quickCmd('limit udp')">limit udp</span>
                                 <span class="cmd-tag" onclick="quickCmd('block ip')">block ip</span>
+                                <span class="cmd-tag" onclick="quickCmd('unblock udp')">unblock</span>
                                 <span class="cmd-tag" onclick="quickCmd('scan-mail')">scan-mail</span>
                                 <span class="cmd-tag" onclick="quickCmd('flush-dns')">flush-dns</span>
+                                <span class="cmd-tag" onclick="quickCmd('passwd')">passwd</span>
+                                <span class="cmd-tag" onclick="quickCmd('clear')">clear</span>
                             </div>
                         </section>
                     </div>
@@ -173,8 +179,8 @@ header('Content-Type: text/html; charset=utf-8');
             </div>
             
             <div id="tab-status" class="tab-content">
-                <h2 class="tab-title">🖥️ 系統硬體即時監控中心</h2>
-                <div class="time-banner">🕒 剩餘時間: <span id="timer">--</span></div>
+                <h2 class="tab-title"><i class="fas fa-desktop"></i> 系統硬體即時監控中心</h2>
+                <div class="time-banner">剩餘時間: <span id="timer">--</span></div>
                 <section class="password-panel" aria-labelledby="password-panel-title">
                     <div>
                         <h3 id="password-panel-title">系統密碼防護</h3>
@@ -227,7 +233,10 @@ header('Content-Type: text/html; charset=utf-8');
                     <table class="manual-table">
                         <thead><tr><th>指令</th><th>功能說明</th></tr></thead>
                         <tbody>
+                            <tr><td><code>help</code></td><td>顯示目前難度可用的系統指令。</td></tr>
                             <tr><td><code>status</code></td><td>查看系統詳細負載狀態與密碼破解進度。</td></tr>
+                            <tr><td><code>ipconfig</code></td><td>查詢目前模擬主機的網路設定。</td></tr>
+                            <tr><td><code>ping [IP]</code></td><td>測試指定 IP 的模擬連線。</td></tr>
                             <tr><td><code>netstat</code></td><td>顯示當前網路連線，若有 DDoS 或異常流量會跳出警告。</td></tr>
                             <tr><td><code style="color: #00ebff;">whois [IP/協定]</code></td><td>(重要) 分析可疑目標，取得授權。範例：<code>whois udp</code></td></tr>
                             <tr><td><code>limit [協定]</code></td><td>暫時限速緩解攻擊傷害，爭取時間尋找來源。</td></tr>
@@ -236,6 +245,7 @@ header('Content-Type: text/html; charset=utf-8');
                             <tr><td><code>flush-dns</code></td><td>清除 DNS 快取。遭受污染時使用。</td></tr>
                             <tr><td><code>scan-mail</code></td><td>自動掃描並隔離惡意釣魚信件。</td></tr>
                             <tr><td><code>passwd</code></td><td>強制重置系統密碼，將破解進度歸零。</td></tr>
+                            <tr><td><code>clear</code></td><td>清空終端機輸出畫面。</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -245,15 +255,16 @@ header('Content-Type: text/html; charset=utf-8');
 
     <div id="tutorial-modal" class="modal hidden">
         <div class="modal-content" style="border: 2px solid #FFA500;">
-            <h2 style="color: #FFA500;">🛡️ 任務簡報與密碼設定</h2>
+            <h2 style="color: #FFA500;"><i class="fas fa-shield-alt"></i> 任務簡報與密碼設定</h2>
             <p>確保系統不崩潰。防禦 SOP：發現異常 ➡️ Whois 分析 ➡️ 部署規則封鎖。</p>
             <div class="password-setup-box">
                 <label>設定本局遊戲密碼
-                    <input id="game-password-initial" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 碼">
+                    <span class="password-input-row"><input id="game-password-initial" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 碼"><button type="button" class="password-toggle" onclick="togglePasswordVisibility('game-password-initial', this)">顯示</button></span>
                 </label>
                 <label>確認本局遊戲密碼
-                    <input id="game-password-initial-confirm" type="password" minlength="8" autocomplete="new-password" placeholder="再次輸入密碼">
+                    <span class="password-input-row"><input id="game-password-initial-confirm" type="password" minlength="8" autocomplete="new-password" placeholder="再次輸入密碼"><button type="button" class="password-toggle" onclick="togglePasswordVisibility('game-password-initial-confirm', this)">顯示</button></span>
                 </label>
+                <div id="game-password-initial-mismatch" class="password-mismatch" aria-live="polite"></div>
                 <div id="game-password-initial-strength" class="password-strength" aria-live="polite">開始前必須設定密碼</div>
             </div>
             <button id="confirm-start-button" class="manual-btn" style="color: #ffffff;background-color: #0fe70f;" onclick="confirmStart()" disabled>設定密碼後開始</button>
@@ -397,6 +408,8 @@ header('Content-Type: text/html; charset=utf-8');
             const result = password ? window.gameManagerInstance.getPasswordProfile(password) : null;
             const strength = document.getElementById('game-password-initial-strength');
             const button = document.getElementById('confirm-start-button');
+            const mismatch = document.getElementById('game-password-initial-mismatch');
+            mismatch.textContent = confirmation && password !== confirmation ? '密碼不一致，請重新確認。' : '';
             if (!result) {
                 strength.textContent = message || '開始前必須設定密碼';
                 button.disabled = true;
@@ -405,6 +418,14 @@ header('Content-Type: text/html; charset=utf-8');
             strength.textContent = message || `密碼強度：${result.label}（${result.strength}/100）`;
             button.disabled = !window.validateGamePassword(password, confirmation).valid;
         }
+
+        window.togglePasswordVisibility = (inputId, button) => {
+            const input = document.getElementById(inputId);
+            const showing = input.type === 'text';
+            input.type = showing ? 'password' : 'text';
+            button.textContent = showing ? '顯示' : '隱藏';
+            button.setAttribute('aria-pressed', String(!showing));
+        };
 
         function updateChangePasswordStrength() {
             const password = document.getElementById('game-password-change').value;

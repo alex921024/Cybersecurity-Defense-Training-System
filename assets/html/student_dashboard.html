@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>SOC 訓練中心 - 學員專區</title>
     <link rel="stylesheet" href="../css/student_dashboard.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -18,7 +21,8 @@
             </div>
         </div>
         <nav class="menu">
-            <button class="menu-btn active"><i class="fas fa-history"></i> 我的歷史紀錄</button>
+            <button class="menu-btn" onclick="switchDashboardTab('history', this)"><i class="fas fa-history"></i> 我的歷史紀錄</button>
+            <button class="menu-btn active" onclick="switchDashboardTab('guide', this)"><i class="fas fa-book-open"></i> 指令與攻擊教學</button>
             <button class="menu-btn" onclick="window.location.href='../../index.php'"><i class="fas fa-gamepad"></i> 開始資安訓練</button>
         </nav>
         <button class="logout-btn" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> 安全登出</button>
@@ -28,7 +32,7 @@
         <header class="topbar">
             <h2><i class="fas fa-chart-line"></i> 個人訓練成效與導師綁定</h2>
         </header>
-        <section class="content-area">
+        <section id="dashboard-tab-history" class="content-area dashboard-tab">
             <!-- 導師綁定區塊 -->
             <div class="panel" style="margin-bottom: 20px;">
                 <h3>導師管理申請</h3>
@@ -50,6 +54,31 @@
                 <p id="difficulty-status-text" style="font-size: 0.9em; color: #a7b8d6; margin-top: 8px;">教師核准後可使用啟用中的自訂訓練難度。</p>
             </div>
 
+            <div id="student-training-guide" class="panel training-guide-panel" style="display:none;">
+                <h3>控制中心教材：指令示範與攻擊防範 SOP</h3>
+                <p class="guide-intro">先在控制中心閱讀教學，再進入遊戲實際操作。所有指令是否可用，會依教師設定的訓練難度而變化。</p>
+                <div class="guide-command-grid">
+                    <article><h4><code>help</code></h4><p><strong>用途：</strong>列出目前難度可用指令。</p><p><strong>示範：</strong>輸入 <code>help</code>，確認本局可用的防禦工具。</p></article>
+                    <article><h4><code>status</code></h4><p><strong>用途：</strong>查看 CPU、GPU、RAM、網路與破解進度。</p><p><strong>示範：</strong>每次警報先輸入 <code>status</code>，建立系統負載基準。</p></article>
+                    <article><h4><code>ipconfig</code>／<code>ping [IP]</code></h4><p><strong>用途：</strong>確認主機網路設定與模擬連線。</p><p><strong>示範：</strong><code>ipconfig</code>、<code>ping 10.0.0.1</code>。</p></article>
+                    <article><h4><code>netstat</code></h4><p><strong>用途：</strong>查看目前連線、異常協定與可疑流量。</p><p><strong>前置：</strong>先查看封包列表，再用 <code>netstat</code> 確認警報。</p></article>
+                    <article><h4><code>whois [IP/協定]</code></h4><p><strong>用途：</strong>分析來源並取得精準封鎖依據。</p><p><strong>示範：</strong><code>whois udp</code>、<code>whois 103.24.55.12</code>。</p></article>
+                    <article><h4><code>limit</code>／<code>unblock</code></h4><p><strong>用途：</strong>限速爭取時間，處理完畢後恢復服務。</p><p><strong>示範：</strong><code>limit udp</code> → 分析 → <code>block [IP]</code> → <code>unblock udp</code>。</p></article>
+                    <article><h4><code>block [IP/協定]</code></h4><p><strong>用途：</strong>建立阻擋規則。</p><p><strong>注意：</strong>優先封鎖確認的惡意 IP，避免直接全域封鎖造成誤傷。</p></article>
+                    <article><h4><code>flush-dns</code>／<code>scan-mail</code></h4><p><strong>用途：</strong>處理 DNS 污染與釣魚郵件。</p><p><strong>示範：</strong><code>whois dns</code> → <code>flush-dns</code>；釣魚警報 → <code>scan-mail</code>。</p></article>
+                    <article><h4><code>passwd</code>／<code>clear</code></h4><p><strong>用途：</strong><code>passwd</code> 到系統狀態更換本局密碼；<code>clear</code> 清除終端畫面。</p><p><strong>注意：</strong>遊戲密碼與登入密碼分離，仍須符合教師密碼政策。</p></article>
+                </div>
+                <h4 class="guide-section-title">所有攻擊模式防範步驟</h4>
+                <div class="guide-attack-grid">
+                    <article><h4>TCP／SYN Flood</h4><ol><li>查看 <code>status</code>。</li><li>用 <code>netstat</code> 找半開連線。</li><li>用 <code>whois [IP]</code> 分析來源。</li><li><code>limit tcp</code> 後精準 <code>block [IP]</code>。</li><li>恢復後 <code>unblock tcp</code>。</li></ol></article>
+                    <article><h4>UDP Flood</h4><ol><li>封包列表篩選 UDP。</li><li>用 <code>netstat</code> 確認流量異常。</li><li>執行 <code>whois udp</code>。</li><li><code>limit udp</code>，確認來源後封鎖。</li></ol></article>
+                    <article><h4>ICMP Flood</h4><ol><li>篩選 ICMP 封包。</li><li>檢查 Ping 頻率與封包大小。</li><li>執行 <code>whois icmp</code> 或分析來源 IP。</li><li>限速或精準封鎖，再確認負載下降。</li></ol></article>
+                    <article><h4>DNS Amplification</h4><ol><li>觀察 DNS 放大回應。</li><li>執行 <code>whois dns</code>。</li><li>執行 <code>flush-dns</code> 清除污染快取。</li><li>持續監控，避免誤封正常 DNS。</li></ol></article>
+                    <article><h4>密碼字典破解</h4><ol><li>用 <code>status</code> 觀察進度。</li><li>設定長密碼與數字、大小寫、特殊符號。</li><li>避免常見字典詞、連號與重複字元。</li><li>更換後確認破解進度歸零。</li></ol></article>
+                    <article><h4>釣魚郵件</h4><ol><li>檢查寄件者、網域與急迫語氣。</li><li>不點擊、不回覆、不下載附件。</li><li>使用 <code>scan-mail</code> 隔離或安全刪除。</li><li>再用 <code>status</code> 確認系統狀態。</li></ol></article>
+                </div>
+            </div>
+
             <div class="panel">
                 <h3>歷史挑戰明細</h3>
                 <table class="data-table">
@@ -68,10 +97,29 @@
                 </table>
             </div>
         </section>
+
+        <section id="dashboard-tab-guide" class="content-area dashboard-tab active">
+            <div class="panel training-guide-panel">
+                <div id="student-guide-content"></div>
+            </div>
+        </section>
     </main>
 
     <script>
+        function switchDashboardTab(tabName, button) {
+            document.querySelectorAll('.dashboard-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.menu-btn').forEach(menuButton => menuButton.classList.remove('active'));
+            document.getElementById(`dashboard-tab-${tabName}`).classList.add('active');
+            button.classList.add('active');
+        }
+
         document.addEventListener("DOMContentLoaded", async () => {
+            const guide = document.getElementById('student-training-guide');
+            const guideContainer = document.getElementById('student-guide-content');
+            if (guide && guideContainer) {
+                guideContainer.appendChild(guide);
+                guide.style.display = 'block';
+            }
             await checkAuth();
             await loadMyRecords();
         });

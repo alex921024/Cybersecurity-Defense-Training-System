@@ -31,6 +31,7 @@ try {
     // 2. 更新學生的 teacher_id 並設定為未審核 (is_approved = 0)
     $update_stmt = $pdo->prepare("UPDATE users SET teacher_id = ?, is_approved = 0 WHERE user_id = ?");
     $update_stmt->execute([$teacher_id, $student_id]);
+    writeAuditLog($pdo, $session, 'apply_teacher', $teacher_username, ['teacher_id' => $teacher_id]);
 
     echo json_encode(["status" => "success", "message" => "已成功送出申請，請等待教師審核"]);
 

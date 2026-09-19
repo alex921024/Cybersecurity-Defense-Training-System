@@ -62,6 +62,22 @@ function requireAuth($roles = null) {
     return $_SESSION;
 }
 
+function writeAuditLog(PDO $pdo, array $session, string $actionType, ?string $targetUsername = null, array $details = []) {
+    $stmt = $pdo->prepare(
+        'INSERT INTO account_operation_logs
+            (operator_id, action_type, target_username, ip_address, device_info, details)
+         VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    $stmt->execute([
+        (int) $session['user_id'],
+        $actionType,
+        $targetUsername,
+        $_SERVER['REMOTE_ADDR'] ?? null,
+        $_SERVER['HTTP_USER_AGENT'] ?? null,
+        json_encode($details, JSON_UNESCAPED_UNICODE)
+    ]);
+}
+
 function validateUsername($username) {
     return preg_match('/^[A-Za-z0-9_-]{4,20}$/', $username) === 1;
 }

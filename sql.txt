@@ -7,25 +7,23 @@
 -- =========================================
 
 -- 1. 使用者與權限管理表 (users)
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     user_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
     role ENUM('student', 'teacher', 'admin') NOT NULL DEFAULT 'student',
     teacher_id INT DEFAULT NULL,
+    is_approved TINYINT(1) NOT NULL DEFAULT 1,
+    google_id VARCHAR(255) DEFAULT NULL,
+    email VARCHAR(255) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_users_google_id (google_id),
+    UNIQUE KEY uq_users_email (email),
     FOREIGN KEY (teacher_id) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-ALTER TABLE users ADD COLUMN IF NOT EXISTS teacher_id INT DEFAULT NULL;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved TINYINT(1) DEFAULT 1;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) DEFAULT NULL;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255) DEFAULT NULL;
-ALTER TABLE users ADD UNIQUE KEY uq_users_google_id (google_id);
-ALTER TABLE users ADD UNIQUE KEY uq_users_email (email);
-
 -- 2. 已刪除帳號備份表 / 資源回收桶 (deleted_users_backup)
-CREATE TABLE deleted_users_backup (
+CREATE TABLE IF NOT EXISTS deleted_users_backup (
     backup_id INT AUTO_INCREMENT PRIMARY KEY,
     original_user_id INT NOT NULL,
     username VARCHAR(50) NOT NULL,
@@ -38,7 +36,7 @@ CREATE TABLE deleted_users_backup (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 3. 帳號操作稽核紀錄表 (account_operation_logs)
-CREATE TABLE account_operation_logs (
+CREATE TABLE IF NOT EXISTS account_operation_logs (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
     operator_id INT NULL,                 
     action_type VARCHAR(50) NOT NULL,     
@@ -55,7 +53,7 @@ CREATE TABLE account_operation_logs (
 -- =========================================
 
 -- 4. 遊戲結算紀錄表 (game_records)
-CREATE TABLE game_records (
+CREATE TABLE IF NOT EXISTS game_records (
     record_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     difficulty INT NOT NULL,
@@ -84,35 +82,9 @@ CREATE TABLE IF NOT EXISTS difficulty_configs (
     game_settings JSON NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (owner_user_id) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
--- 相容既有資料庫：為原有難度表補上教師自訂難度所需欄位。
-ALTER TABLE difficulty_configs MODIFY COLUMN diff_id INT NOT NULL AUTO_INCREMENT;
-ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS name VARCHAR(100) NOT NULL DEFAULT '未命名難度';
-ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS description VARCHAR(255) DEFAULT NULL;
-ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS owner_user_id INT DEFAULT NULL;
-ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS command_policy JSON NULL;
-ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS attack_policy JSON NULL;
-ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS game_settings JSON NULL;
-ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
-ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS created_at DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE difficulty_configs ADD COLUMN IF NOT EXISTS updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
-SET @difficulty_owner_fk_exists = (
-    SELECT COUNT(*)
-    FROM information_schema.TABLE_CONSTRAINTS
-    WHERE CONSTRAINT_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'difficulty_configs'
-      AND CONSTRAINT_NAME = 'fk_difficulty_owner'
-);
-SET @difficulty_owner_fk_sql = IF(
-    @difficulty_owner_fk_exists = 0,
-    'ALTER TABLE difficulty_configs ADD CONSTRAINT fk_difficulty_owner FOREIGN KEY (owner_user_id) REFERENCES users(user_id) ON DELETE SET NULL',
-    'SELECT 1'
-);
-PREPARE difficulty_owner_fk_stmt FROM @difficulty_owner_fk_sql;
-EXECUTE difficulty_owner_fk_stmt;
-DEALLOCATE PREPARE difficulty_owner_fk_stmt;
 
 -- 自訂難度使用權限：教師可將自己的難度分配給所管理的學生。
 CREATE TABLE IF NOT EXISTS difficulty_assignments (
@@ -128,7 +100,7 @@ CREATE TABLE IF NOT EXISTS difficulty_assignments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 6. 惡意 IP 題庫表 (threat_ips)
-CREATE TABLE threat_ips (
+CREATE TABLE IF NOT EXISTS threat_ips (
     ip_id INT AUTO_INCREMENT PRIMARY KEY,
     ip_address VARCHAR(45) NOT NULL,
     attack_type VARCHAR(50) NOT NULL,
@@ -137,14 +109,14 @@ CREATE TABLE threat_ips (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 7. 正常業務 IP 表 / 誤殺地雷 (vip_ips)
-CREATE TABLE vip_ips (
+CREATE TABLE IF NOT EXISTS vip_ips (
     ip_id INT AUTO_INCREMENT PRIMARY KEY,
     ip_address VARCHAR(45) NOT NULL,
     description VARCHAR(255)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 8. 郵件題庫表 (phishing_emails)
-CREATE TABLE phishing_emails (
+CREATE TABLE IF NOT EXISTS phishing_emails (
     email_id INT AUTO_INCREMENT PRIMARY KEY,
     sender VARCHAR(100) NOT NULL,
     subject VARCHAR(255) NOT NULL,
@@ -156,7 +128,6 @@ CREATE TABLE phishing_emails (
 
 DELETE FROM difficulty_assignments;
 DELETE FROM difficulty_configs;
-ALTER TABLE difficulty_configs AUTO_INCREMENT = 3;
 SET @previous_sql_mode = @@SESSION.sql_mode;
 SET SESSION sql_mode = CONCAT_WS(',', @@SESSION.sql_mode, 'NO_AUTO_VALUE_ON_ZERO');
 INSERT INTO difficulty_configs
@@ -181,13 +152,6 @@ VALUES
     '{"attack_cooldown": 12, "damage_multiplier": 1, "crack_speed": 1, "initial_load": {"cpu": 12, "gpu": 8, "ram": 25, "wifi": 5}, "password_policy": {"min_length": 8, "require_number": true, "require_uppercase": false, "require_symbol": false, "allow_change": true, "change_cooldown": 30}, "dictionary_attack": {"enabled": true, "speed_multiplier": 1}}',
     TRUE);
 SET SESSION sql_mode = @previous_sql_mode;
-
--- 為舊資料庫中已存在的預設難度補上政策內容；新安裝會由上方 INSERT 直接寫入。
-UPDATE difficulty_configs
-SET command_policy = COALESCE(command_policy, '{"status": true, "netstat": true, "whois": true, "limit": true, "block": true, "unblock": true, "flush-dns": true, "scan-mail": true, "passwd": true}'),
-    attack_policy = COALESCE(attack_policy, '{"syn": true, "udp": true, "icmp": true, "dns": true, "crack": true, "fishing": true}'),
-    game_settings = COALESCE(game_settings, '{"attack_cooldown": 12, "damage_multiplier": 1, "crack_speed": 1, "initial_load": {"cpu": 12, "gpu": 8, "ram": 25, "wifi": 5}, "password_policy": {"min_length": 8, "require_number": true, "require_uppercase": false, "require_symbol": false, "allow_change": true, "change_cooldown": 30}, "dictionary_attack": {"enabled": true, "speed_multiplier": 1}}')
-WHERE command_policy IS NULL OR attack_policy IS NULL OR game_settings IS NULL;
 
 
 -- 2. 匯入惡意 IP 題庫 (threat_ips)
@@ -219,7 +183,7 @@ INSERT INTO phishing_emails (sender, subject, content, is_malicious) VALUES
 ('HR 部門', '本月出勤紀錄確認', '請同仁至差勤系統確認本月打卡紀錄是否有誤，若有請假未簽核請盡速處理。', 0),
 ('IT Support', '系統例行維護通知', '伺服器將於本週五晚間進行系統升級，屆時內部網路將中斷 15 分鐘，請見諒。', 0),
 ('總務處', '下午茶訂購統計', '各位同仁好，今天的下午茶是雞排配珍奶，請要訂購的同仁於下午兩點前至總務處登記。', 0),
-('系統自動通知', '[成功] DB-01 每日備份報告', '系統排程通知：\n昨晚的資料庫排程備份已成功完成，共計 45GB，無錯誤日誌產生。', 0),
+('系統自動通知', '成功：DB-01 每日備份報告', '系統排程通知：\n昨晚的資料庫排程備份已成功完成，共計 45GB，無錯誤日誌產生。', 0),
 ('行銷部_林專員', 'Q3 行銷活動企劃書初稿', '各位好，附件是下季度的企劃書草案，請大家在週三前提供修改建議，我們預計週五開會討論。', 0),
 ('AWS Billing', 'Amazon Web Services Invoice Available', '您本月的 AWS 服務帳單已結算，總計 $450.00 USD，款項將於三日內從系統預設之信用卡扣除。', 0),
 ('法務部', '員工保密協議 (NDA) 條款更新', '配合最新個資法規範，公司已更新內部保密協議。請同仁有空時至內網 EIP 系統詳閱新版條款。', 0),
@@ -227,7 +191,7 @@ INSERT INTO phishing_emails (sender, subject, content, is_malicious) VALUES
 
 -- 【惡意釣魚郵件】
 INSERT INTO phishing_emails (sender, subject, content, is_malicious) VALUES 
-('IT_Admin (外部)', '[警告] 您的網域密碼即將過期', '系統偵測到您的密碼將在 24 小時內過期。\n\n請立即點擊以下連結進行重置：\nhttp://sec-update-portal-login.com/reset\n\n若未完成，您的帳號將被永久凍結。', 1),
+('IT_Admin (外部)', '警告：您的網域密碼即將過期', '系統偵測到您的密碼將在 24 小時內過期。\n\n請立即點擊以下連結進行重置：\nhttp://sec-update-portal-login.com/reset\n\n若未完成，您的帳號將被永久凍結。', 1),
 ('Apple_Support_Team', 'Apple ID 異常登入警告', '我們偵測到您的帳號在海外有異常登入嘗試。\n\n請回覆此郵件，並附上您的身分證件照片與原密碼以解鎖帳號。', 1),
 ('財務部_王經理', 'RE: 2026年度財務報表 (機密)', '附件是今年的財務報表與員工薪資清單，請點擊連結下載查看：\nhttp://download-finance-report-2026.zip.exe \n\n請勿外流。', 1),
 ('總經理 (CEO)', '急件！匯款指示 (人在外開會)', '我現在在外面與客戶開會，不方便接電話。\n\n請立刻幫我匯款 $15,000 美金到這個合作夥伴的帳戶，這是急件！匯款帳戶詳情請點擊下方連結確認：\nhttp://ceo-urgent-transfer-auth.com/doc', 1),

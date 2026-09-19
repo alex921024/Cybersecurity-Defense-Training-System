@@ -36,10 +36,10 @@ header('Content-Type: text/html; charset=utf-8');
         <aside id="game-sidebar">
             <div class="sidebar-header">防禦中心</div>     
             <nav class="tab-menu">
-                <button id="menu-tab-firewall" class="tab-btn active" onclick="switchTutorialTab('tab-firewall')">🛡️ 監控與控制台</button>
-                <button id="menu-tab-status" class="tab-btn" onclick="switchTutorialTab('tab-status')">📈 系統狀態</button>
-                <button id="menu-tab-mailbox" class="tab-btn" onclick="switchTutorialTab('tab-mailbox')">📧 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">1</span></button>
-                <button id="menu-tab-manual" class="tab-btn" onclick="switchTutorialTab('tab-manual')">📘 指令手冊</button>
+                <button id="menu-tab-firewall" class="tab-btn active" onclick="switchTutorialTab('tab-firewall')"><i class="fas fa-shield-alt"></i> 監控與控制台</button>
+                <button id="menu-tab-status" class="tab-btn" onclick="switchTutorialTab('tab-status')"><i class="fas fa-chart-line"></i> 系統狀態</button>
+                <button id="menu-tab-mailbox" class="tab-btn" onclick="switchTutorialTab('tab-mailbox')"><i class="fas fa-inbox"></i> 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">1</span></button>
+                <button id="menu-tab-manual" class="tab-btn" onclick="switchTutorialTab('tab-manual')"><i class="fas fa-book"></i> 指令手冊</button>
             </nav>
             <button class="quit-btn" onclick="location.href='../index.php'">結束教學</button>
         </aside>
@@ -47,7 +47,7 @@ header('Content-Type: text/html; charset=utf-8');
         <main id="tab-content-container">
             <!-- 區塊一：Wireshark 與 控制台 -->
             <div id="tab-firewall" class="tab-content active">
-                <h2 class="tab-title" style="margin: 0 0 10px 0; font-size: 1.2em;">🛡️ SOC 即時防禦儀表板 (Monitoring & Terminal)</h2>
+                <h2 class="tab-title" style="margin: 0 0 10px 0; font-size: 1.2em;"><i class="fas fa-shield-alt"></i> SOC 即時防禦儀表板 (Monitoring & Terminal)</h2>
                 <div id="mission-panel" class="mission-panel">
                     <div class="mission-head">
                         <div>
@@ -73,7 +73,7 @@ header('Content-Type: text/html; charset=utf-8');
                             <div class="analysis-header" style="display: flex; justify-content: space-between; align-items: center;">
                                 <h3 style="margin:0;">即時流量監控 (Wireshark)</h3>
                                 <div>
-                                    <button id="btn-pause-packet" class="cmd-tag" style="background:#ff9900; color:#000; font-weight:bold; padding:6px 12px; margin-right: 10px;">⏸️ 暫停擷取</button>
+                                    <button id="btn-pause-packet" class="cmd-tag" style="background:#ff9900; color:#000; font-weight:bold; padding:6px 12px; margin-right: 10px;">暫停擷取</button>
                                     <select id="protocol-filter">
                                         <option value="ALL">全部 (ALL)</option>
                                     </select>
@@ -178,7 +178,7 @@ header('Content-Type: text/html; charset=utf-8');
                     </div>
                     <div class="chart-box danger-box">
                         <div class="chart-header"><span style="color: #FF3333;">密碼破解進度</span><span class="live-indicator danger-pulse"></span></div>
-                        <div class="chart-body"><div style="color:#ff3333; text-align:center; line-height:150px;">🛡️ 教學模式已阻斷破解</div></div>
+                        <div class="chart-body"><div style="color:#ff3333; text-align:center; line-height:150px;">教學模式已阻斷破解</div></div>
                         <div class="chart-footer" style="color: #FF3333;">進度: <span id="crack-progress">0</span>%</div>
                     </div>
                 </div>
@@ -190,7 +190,6 @@ header('Content-Type: text/html; charset=utf-8');
                 <div class="mail-layout">
                     <div class="mail-list" id="mail-list-container">
                         <div class="mail-item unread" style="cursor: pointer;">
-                            <span class="mail-badge phishing">🎣 釣魚嫌疑</span>
                             <div style="margin-top:5px; font-weight:bold;">系統管理員：請立即變更您的重要密碼</div>
                             <div style="font-size:12px; color:#aaa; margin-top:3px;">發件人: admin@fake-security.com</div>
                         </div>
@@ -224,6 +223,24 @@ header('Content-Type: text/html; charset=utf-8');
                             <tr><td><code>passwd</code></td><td>強制重置系統密碼，將破解進度歸零。</td></tr>
                         </tbody>
                     </table>
+                    <section class="training-reference">
+                        <h3>完整指令示範</h3>
+                        <div class="reference-grid">
+                            <article><h4><code>status</code> → <code>netstat</code></h4><p>先看 CPU、RAM、破解進度，再查看異常連線與來源。這是每次警報後的第一個檢查順序。</p></article>
+                            <article><h4><code>whois</code> → <code>limit</code> → <code>block</code></h4><p>先分析目標取得授權，再限速爭取時間，最後只封鎖確認的惡意 IP。完成後以 <code>unblock</code> 清除暫時性副作用。</p></article>
+                            <article><h4><code>flush-dns</code>、<code>scan-mail</code></h4><p>DNS 必須先執行 <code>whois dns</code>；釣魚郵件要先辨識寄件者、網域與急迫語氣，再掃描隔離。</p></article>
+                            <article><h4><code>passwd</code>、<code>clear</code></h4><p><code>passwd</code> 會引導你到系統狀態設定本局遊戲密碼；<code>clear</code> 只清除畫面，不會清除防火牆規則。</p></article>
+                        </div>
+                        <h3>六種攻擊防範步驟</h3>
+                        <div class="reference-grid attack-reference">
+                            <article><h4>TCP／SYN Flood</h4><p>觀察半開連線 → <code>whois [IP]</code> → <code>limit tcp</code> → 精準 <code>block [IP]</code> → 恢復後 <code>unblock tcp</code>。</p></article>
+                            <article><h4>UDP Flood</h4><p>篩選 UDP → <code>netstat</code> → <code>whois udp</code> → <code>limit udp</code> → 分析來源後封鎖。</p></article>
+                            <article><h4>ICMP Flood</h4><p>篩選 ICMP → 觀察頻率與大小 → <code>whois icmp</code> → 限速或精準封鎖。</p></article>
+                            <article><h4>DNS Amplification</h4><p>確認放大流量 → <code>whois dns</code> → <code>flush-dns</code> → 持續監控正常 DNS 服務。</p></article>
+                            <article><h4>密碼破解</h4><p>查看破解進度 → 設定長且複雜的本局密碼 → 避免常見字典詞與連號 → 確認進度歸零。</p></article>
+                            <article><h4>釣魚郵件</h4><p>不點擊連結 → 檢查寄件者與網域 → <code>scan-mail</code> 隔離或安全刪除 → 觀察系統狀態。</p></article>
+                        </div>
+                    </section>
                 </div>
             </div>
         </main>

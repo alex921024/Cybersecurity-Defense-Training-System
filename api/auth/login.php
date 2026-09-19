@@ -60,7 +60,7 @@ try {
     // 8. 依據身分決定導向網址 (分流機制)
     $redirect_url = '';
     if ($user['role'] === 'student') {
-        $redirect_url = '../../assets/html/student_dashboard.html';
+        $redirect_url = '../../assets/html/student_dashboard.html?v=20260920';
     } else {
         // 教師 (teacher) 或管理員 (admin) 導向後台
         $redirect_url = '../../assets/html/dashboard.html';

@@ -39,7 +39,7 @@ body {
 
 .user-info {
     font-size: 0.9em;
-    color: var(--muted-text);
+    color: #c9d1d9;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 15px;
     margin-bottom: 20px;
@@ -55,7 +55,7 @@ body {
 .menu-btn {
     background: transparent;
     border: none;
-    color: var(--muted-text);
+    color: #c9d1d9;
     padding: 12px 15px;
     text-align: left;
     border-radius: 6px;
@@ -112,6 +112,14 @@ body {
     padding: 30px;
 }
 
+.dashboard-tab {
+    display: none;
+}
+
+.dashboard-tab.active {
+    display: block;
+}
+
 .panel {
     background-color: var(--sidebar-bg);
     border: 1px solid var(--border-color);
@@ -147,4 +155,73 @@ body {
 
 .data-table tr:hover {
     background-color: rgba(88, 166, 255, 0.08);
+}
+
+.training-guide-panel h4 {
+    color: #ffaa00;
+    margin: 8px 0;
+}
+
+.guide-intro {
+    color: #e6edf3;
+    line-height: 1.6;
+}
+
+.guide-command-grid,
+.guide-attack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+}
+
+.guide-command-grid article,
+.guide-attack-grid article {
+    padding: 12px;
+    border: 1px solid #26384c;
+    background: #0b141e;
+}
+
+.guide-command-grid p,
+.guide-attack-grid ol {
+    margin: 6px 0;
+    color: #e6edf3;
+    line-height: 1.55;
+}
+
+.guide-command-grid code,
+.guide-attack-grid code {
+    color: #00ebff;
+}
+
+.guide-section-title {
+    margin-top: 20px !important;
+    padding-top: 12px;
+    border-top: 1px solid #26384c;
+}
+
+.guide-attack-grid article {
+    border-left: 3px solid #f85149;
+}
+
+.guide-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.guide-columns ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #b8c7de;
+    line-height: 1.65;
+}
+
+.guide-columns code {
+    color: #00ebff;
+}
+
+@media (max-width: 800px) {
+    .guide-columns {
+        grid-template-columns: 1fr;
+    }
 }
