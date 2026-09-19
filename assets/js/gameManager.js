@@ -15,7 +15,7 @@ class GameManager {
         this.inbox = [];
         this.mailCounter = 0;
         this.packetHistory = [];
-        this.stats = { syn: 0, udp: 0, dns: 0, icmp: 0, fishing: 0 };
+        this.stats = { syn: 0, udp: 0, dns: 0, icmp: 0, fishing: 0, mailReceived: 0, mailHandled: 0, mailUnanswered: 0, mailCorrect: 0, mailWrong: 0 };
         this.activeRules = []; 
         this.analyzedTargets = new Set(); 
 
@@ -99,7 +99,7 @@ class GameManager {
         this.mailCounter = 0;
         this.packetHistory = []; 
         this.activeRules = [];
-        this.stats = { syn: 0, udp: 0, dns: 0, icmp: 0, fishing: 0 };
+        this.stats = { syn: 0, udp: 0, dns: 0, icmp: 0, fishing: 0, mailReceived: 0, mailHandled: 0, mailUnanswered: 0, mailCorrect: 0, mailWrong: 0 };
         this.activeSideEffects = [];
         this.activeLimits = [];
         this.isPacketPaused = false;
@@ -668,6 +668,7 @@ class GameManager {
         const pool = isMalicious ? GameDB.emails.malicious : GameDB.emails.normal;
         const mailData = pool[Math.floor(Math.random() * pool.length)];
         this.inbox.unshift({ id: this.mailCounter, sender: mailData.sender, subject: mailData.subject, content: mailData.content, isMalicious: isMalicious, spawnTime: this.status.timer, read: false, punished: false });
+        this.stats.mailReceived++;
         this.renderMailList();
         if (isMalicious && !this.activeThreat) {
             this.updateMissionPanel('郵件警報', '檢測到可疑郵件，請前往收件匣閱讀或執行 scan-mail。', '釣魚信件可能夾帶惡意連結，可先刪除或掃描。', 2);
@@ -697,6 +698,8 @@ class GameManager {
 
         if (removedCount > 0) {
             this.stats.fishing += removedCount;
+            this.stats.mailHandled += removedCount;
+            this.stats.mailCorrect += removedCount;
             this.status.reduceLoad(15);
             if (this.activeThreat === 'fishing') {
                 this.activeThreat = null;
@@ -721,35 +724,13 @@ class GameManager {
         this.inbox.forEach(mail => {
             if(!mail.read) unread++;
             const div = document.createElement('div');
-            let timeWarning = ""; 
-            
-            const limit = 45; 
-            
-            const remaining = limit - (mail.spawnTime - this.status.timer);
-            if (remaining >= 0) timeWarning = ` <span style="color: #FF0000;"> ${remaining}s</span>`;
-            else {
-                timeWarning = ` <span style="color: #888;"> 已過期</span>`;
-                if (!mail.punished) { 
-                    mail.punished = true;
-                    if (mail.isMalicious) {
-                        this.triggerErrorFlash();
-                        this.status.applyDamage('Fishing', this.gameSettings.damage_multiplier ?? 1);
-                        this.logTerminal(`[重大警報] 釣魚郵件未處理，系統遭感染！`, "danger"); 
-                        
-                        if (this.activeThreat === 'fishing') {
-                            this.activeThreat = null;
-                            this.peaceCooldown = 10; 
-                        }
-                    } else this.status.cpu += 5;
-                }
-            }
             div.className = `mail-item ${mail.read ? 'read' : 'unread'}`;
             div.onclick = () => this.viewMail(mail.id);
             div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
                     <strong>${mail.sender}</strong>
                 </div>
                 <div style="font-size:0.9em; color:#c1d5ff;">${mail.subject}</div>
-                <div style="font-size:0.8em; color:#888; margin-top:6px;">${timeWarning.trim()}</div>`;
+                <div style="font-size:0.8em; color:#888; margin-top:6px;">${mail.read ? '已查看' : '未查看'}</div>`;
             list.appendChild(div);
         });
         const unreadBadge = document.getElementById('unread-count');
@@ -777,6 +758,9 @@ class GameManager {
         const mail = this.inbox[mailIndex];
 
         if (action === 'delete') {
+            this.stats.mailHandled++;
+            if (mail.isMalicious) this.stats.mailCorrect++;
+            else this.stats.mailWrong++;
             if (mail.isMalicious && this.activeThreat === 'fishing') {
                 this.stats.fishing++; 
                 this.activeThreat = null; 
@@ -791,6 +775,9 @@ class GameManager {
             document.getElementById('mail-viewer-container').innerHTML = '';
             this.renderMailList();
         } else if (action === 'click') {
+            this.stats.mailHandled++;
+            if (mail.isMalicious) this.stats.mailWrong++;
+            else this.stats.mailCorrect++;
             if (mail.isMalicious) {
                 this.triggerErrorFlash(); 
                 this.activeThreat = null; 
@@ -932,7 +919,8 @@ class GameManager {
         const maxTime = this.difficultyConfig ? this.difficultyConfig.time : 240;
         const survivalTime = maxTime - (this.status ? this.status.timer : 0);
         // 簡單計分公式：存活秒數 * 10，若破關則額外加 1000 分
-        const finalScore = (survivalTime * 10) + (reason === "SUCCESS" ? 1000 : 0);
+        const finalScore = (survivalTime * 10) + (reason === "SUCCESS" ? 1000 : 0) + (this.stats.mailCorrect * 50) - (this.stats.mailWrong * 50);
+        this.stats.mailUnanswered = Math.max(0, this.stats.mailReceived - this.stats.mailHandled);
 
         // 2. 透過 API 儲存至資料庫
         try {
@@ -962,7 +950,7 @@ class GameManager {
             if(titleEl) { titleEl.innerText = results[reason].title; titleEl.style.color = results[reason].color; }
             
             const reasonEl = document.getElementById('game-over-reason'); 
-            if(reasonEl) reasonEl.innerText = results[reason].desc;
+            if(reasonEl) reasonEl.innerText = `${results[reason].desc} 郵件統計：已處理 ${this.stats.mailHandled} 封，未處理 ${this.stats.mailUnanswered} 封，正確 ${this.stats.mailCorrect} 封，錯誤 ${this.stats.mailWrong} 封。`;
             
             const modalEl = document.getElementById('game-over-modal'); 
             if(modalEl) modalEl.classList.remove('hidden');

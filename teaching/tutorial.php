@@ -199,7 +199,7 @@ header('Content-Type: text/html; charset=utf-8');
                         <p style="color: #b8c7de; font-size:14px; line-height:1.6; margin-top:15px;">
                             親愛的用戶您好，系統偵測到您的帳號有異常登入風險。<br>
                             請點擊下方連結立即強制重置密碼，否則帳號將在 24 小時內凍結。<br><br>
-                            <a href="#" style="color:#ff4444; text-decoration:underline;">👉 點此安全驗證連線並重置密碼 (惡意網址)</a>
+                            <a href="#" style="color:#ff4444; text-decoration:underline;">點此安全驗證連線並重置密碼 (惡意網址)</a>
                         </p>
                     </div>
                 </div>

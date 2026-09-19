@@ -20,8 +20,9 @@ class CLIModule {
             case 'status':
                 const totalMail = this.gm.inbox.length;
                 const phishingCount = this.gm.inbox.filter(mail => mail.isMalicious).length;
-                const mailInfo = totalMail > 0 ? `\n郵件: ${totalMail} 封 (${phishingCount} 封可疑)` : "";
-                return `[狀態]\nCPU: ${Math.floor(this.gm.status.cpu)}% | GPU: ${Math.floor(this.gm.status.gpu)}%\nRAM: ${Math.floor(this.gm.status.ram)}% | WiFi: ${Math.floor(this.gm.status.wifi)}%\n破解進度: ${Math.floor(this.gm.status.crackProgress)}%${mailInfo}`;
+                const mailInfo = totalMail > 0 ? `\n目前收件匣: ${totalMail} 封 (${phishingCount} 封待處理)` : "";
+                const mailStats = `\n郵件統計: 已處理 ${this.gm.stats.mailHandled} | 未處理 ${this.gm.stats.mailUnanswered} | 正確 ${this.gm.stats.mailCorrect} | 錯誤 ${this.gm.stats.mailWrong}`;
+                return `系統狀態\nCPU: ${Math.floor(this.gm.status.cpu)}% | GPU: ${Math.floor(this.gm.status.gpu)}%\nRAM: ${Math.floor(this.gm.status.ram)}% | WiFi: ${Math.floor(this.gm.status.wifi)}%\n破解進度: ${Math.floor(this.gm.status.crackProgress)}%${mailInfo}${mailStats}`;
 
             case 'ipconfig':
                 return `IPv4 位址 . . . : 10.0.0.1\n子網路遮罩 . . . : 255.255.255.0\n預設閘道 . . . . : 10.0.0.254`;
