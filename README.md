@@ -15,8 +15,11 @@ Cybersecurity Defense Training System 是一套以 PHP、MySQL 與原生 JavaScr
 - 教師難度管理：已核准且綁定教師的學生可使用該教師啟用中的自訂難度；教師也可使用分配功能進行後續精細控管。
 - 學生教師綁定：學生可查看目前綁定教師與已分配的訓練難度。
 - 帳號與權限管理：支援學生、教師與管理員角色。
+- 管理員帳號維護：管理員可將學生升級為教師，並修改教師與學生登入密碼；密碼使用 Argon2id 雜湊並留下稽核紀錄。
+- 郵件題庫管理：管理員可新增、查看與刪除正常郵件及釣魚郵件訓練題目。
 - Google OAuth 登入：首次使用 Google 登入時可自動建立學生帳號。
 - 教學模式：提供逐步引導的 SOC 防禦操作流程。
+- 響應式介面：登入頁、管理後台、學生控制台、訓練遊戲與教學浮窗可自適應桌面、平板及手機視窗。
 
 ## 技術架構
 
@@ -48,6 +51,13 @@ Cybersecurity Defense Training System 是一套以 PHP、MySQL 與原生 JavaScr
 ├── sql.txt         # 資料庫結構與初始資料
 └── test_code/      # 測試與開發用程式
 ```
+
+管理員相關 API 包含：
+
+- [api/admin/update_user.php](api/admin/update_user.php)：升級學生帳號、帳號綁定操作與修改教師／學生密碼。
+- [api/admin/manage_emails.php](api/admin/manage_emails.php)：新增與刪除郵件題庫題目。
+- [api/admin/get_content_catalog.php](api/admin/get_content_catalog.php)：讀取完整威脅與郵件題庫。
+- [api/admin/get_audit_logs.php](api/admin/get_audit_logs.php)：查詢帳號與訓練操作稽核紀錄。
 
 ## 安裝與啟動
 
@@ -136,12 +146,13 @@ OAuth 主要檔案：
 ## 使用流程
 
 1. 開啟登入頁並註冊帳號，或使用 Google 登入。
-2. 教師進入管理後台的「我的訓練難度」，建立難度並設定指令與攻擊開關。
-3. 學生完成教師綁定並通過核准後，會自動看到該教師啟用中的自訂難度；教師可在學生列表進一步調整分配。
-4. 學生在控制台查看目前綁定教師，選擇可用的教師難度開始訓練。
-5. 從 [index.php](index.php) 選擇可用難度並確認任務簡報。
-6. 依序觀察警報、分析流量、執行防禦指令與處理郵件。
-7. 從主選單進入 [teaching/tutorial.php](teaching/tutorial.php) 查看互動教學。
+2. 管理員可在「帳號清單與審核」中管理教師／學生帳號、修改登入密碼，並在「動態題庫管理」中維護郵件題目。
+3. 教師進入管理後台的「我的訓練難度」，建立難度並設定指令與攻擊開關。
+4. 學生完成教師綁定並通過核准後，會自動看到該教師啟用中的自訂難度；教師可在學生列表進一步調整分配。
+5. 學生在控制台查看目前綁定教師，選擇可用的教師難度開始訓練。
+6. 從 [index.php](index.php) 選擇可用難度並確認任務簡報。
+7. 依序觀察警報、分析流量、執行防禦指令與處理郵件。
+8. 從主選單進入 [teaching/tutorial.php](teaching/tutorial.php) 查看互動教學。
 
 ## 教師自訂難度
 
