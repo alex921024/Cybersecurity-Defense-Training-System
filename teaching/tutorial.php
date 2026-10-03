@@ -22,7 +22,7 @@ header('Content-Type: text/html; charset=utf-8');
 </head>
 <body>
     <!-- 頂層教學控制大腦對話框 -->
-    <div class="../tutorial-overlay">
+    <div class="tutorial-overlay">
         <h2 id="tutorial-title" style="color: #00FF00; margin-top: 0;">載入中...</h2>
         <p id="tutorial-desc" style="color: #fff; min-height: 60px; line-height: 1.6;"></p>
         <div style="text-align: right; margin-top: 15px;">
@@ -45,7 +45,7 @@ header('Content-Type: text/html; charset=utf-8');
         </aside>
 
         <main id="tab-content-container">
-            <!-- 區塊一：Wireshark 與 控制台 -->
+            <!-- 區塊一:Wireshark 與 控制台 -->
             <div id="tab-firewall" class="tab-content active">
                 <h2 class="tab-title" style="margin: 0 0 10px 0; font-size: 1.2em;"><i class="fas fa-shield-alt"></i> SOC 即時防禦儀表板 (Monitoring & Terminal)</h2>
                 <div id="mission-panel" class="mission-panel">
@@ -190,16 +190,15 @@ header('Content-Type: text/html; charset=utf-8');
                 <div class="mail-layout">
                     <div class="mail-list" id="mail-list-container">
                         <div class="mail-item unread" style="cursor: pointer;">
-                            <div style="margin-top:5px; font-weight:bold;">系統管理員：請立即變更您的重要密碼</div>
-                            <div style="font-size:12px; color:#aaa; margin-top:3px;">發件人: admin@fake-security.com</div>
+                            <div style="margin-top:5px; font-weight:bold;">教學關卡用信件</div>
+                            <div style="font-size:12px; color:#aaa; margin-top:3px;">寄件者: 教官的貓</div>
                         </div>
                     </div>
                     <div class="mail-viewer" id="mail-viewer-container">
-                        <div class="mail-header"><h3>主旨：請立即變更您的重要密碼</h3></div>
+                        <div class="mail-header"><h3>主旨：教學關卡用信件</h3></div>
+                        <div style="font-size: 14px; color: #aaa; margin-top: 5px; margin-bottom: 15px;">寄件者：<span style="color: #fff;">教官的貓</span></div>
                         <p style="color: #b8c7de; font-size:14px; line-height:1.6; margin-top:15px;">
-                            親愛的用戶您好，系統偵測到您的帳號有異常登入風險。<br>
-                            請點擊下方連結立即強制重置密碼，否則帳號將在 24 小時內凍結。<br><br>
-                            <a href="#" style="color:#ff4444; text-decoration:underline;">點此安全驗證連線並重置密碼 (惡意網址)</a>
+                            教學關卡用信件(身為一隻貓不會在意你是否接受)
                         </p>
                     </div>
                 </div>
