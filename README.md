@@ -5,14 +5,14 @@ Cybersecurity Defense Training System 是一套以 PHP、MySQL 與原生 JavaScr
 ## 功能特色
 
 - 即時封包監控：檢視 TCP、UDP、ICMP 與 DNS 流量。
-- 威脅情報分析：分析可疑 IP 與攻擊協定。
+- 威脅情報分析：以資料庫威脅題庫中的 IP、攻擊類型與封包特徵產生並分析可疑流量。
 - 防火牆策略操作：封鎖流量、來源 IP、DNS 快取與其他攻擊面。
 - 虛擬終端機：使用 `status`、`netstat`、`whois`、`block`、`scan-mail` 等指令進行防禦。
 - 社交工程訓練：辨識正常郵件與釣魚郵件。
 - 系統狀態模擬：追蹤 CPU、GPU、RAM、Wi-Fi 與密碼破解進度。
 - 遊戲密碼防護：開始前必須設定本局密碼，並可在遊戲中更換；密碼只用於模擬，不會修改登入密碼。
 - 系統預設與教師自訂訓練難度：教師可設定遊戲時間、可用防禦指令與攻擊模擬。
-- 教師難度管理：已核准且綁定教師的學生可使用該教師啟用中的自訂難度；教師也可使用分配功能進行後續精細控管。
+- 教師難度管理：已核准且綁定教師的學生，只能使用教師明確分配給自己的啟用中自訂難度。
 - 學生教師綁定：學生可查看目前綁定教師與已分配的訓練難度。
 - 帳號與權限管理：支援學生、教師與管理員角色。
 - 管理員帳號維護：管理員可將學生升級為教師，並修改教師與學生登入密碼；密碼使用 Argon2id 雜湊並留下稽核紀錄。
@@ -59,6 +59,128 @@ Cybersecurity Defense Training System 是一套以 PHP、MySQL 與原生 JavaScr
 - [api/admin/get_content_catalog.php](api/admin/get_content_catalog.php)：讀取完整威脅與郵件題庫。
 - [api/admin/get_audit_logs.php](api/admin/get_audit_logs.php)：查詢帳號與訓練操作稽核紀錄。
 
+## 資料庫結構
+
+完整定義見 [sql.txt](sql.txt)。所有資料表使用 InnoDB 與 `utf8mb4`。
+
+### 資料表關係
+
+```text
+users ─┬─< game_records                 （學生訓練結算）
+       ├─< account_operation_logs       （操作者；刪除使用者時設為 NULL）
+       ├─< difficulty_configs           （教師自訂難度擁有者；系統預設為 NULL）
+       │        └─< difficulty_assignments >─ users（被分配的學生）
+       └── users.teacher_id → users.user_id（學生綁定教師）
+
+threat_ips、vip_ips、phishing_emails：獨立題庫，無外鍵
+deleted_users_backup、login_attempts：獨立表，無外鍵
+```
+
+### 帳號與權限
+
+#### `users`：使用者
+
+| 欄位 | 說明 |
+|---|---|
+| `user_id` | 主鍵，自動遞增 |
+| `username` | 登入帳號，唯一 |
+| `password_hash` | Argon2id 密碼雜湊（Google 帳號亦保留此欄位） |
+| `role` | 角色：`student`、`teacher`、`admin`，預設 `student` |
+| `teacher_id` | 學生綁定的教師，參照 `users.user_id`；教師被刪除時設為 NULL |
+| `is_approved` | 是否已核准，`1` 為已核准；未核准的學生不能開始訓練 |
+| `google_id`、`email` | Google OAuth 綁定資料，各自唯一 |
+| `created_at` | 建立時間 |
+
+#### `deleted_users_backup`：已刪除帳號備份
+
+刪除帳號前保存的資源回收桶，欄位包含 `original_user_id`、`username`、`password_hash`、`role`、`teacher_id`、`account_created_at`、`deleted_at` 與 `deleted_by`（執行刪除的使用者）。此表沒有外鍵，帳號刪除後備份仍保留。
+
+#### `account_operation_logs`：帳號操作稽核紀錄
+
+| 欄位 | 說明 |
+|---|---|
+| `log_id` | 主鍵 |
+| `operator_id` | 操作者，參照 `users.user_id`；操作者被刪除時設為 NULL |
+| `action_type` | 操作類型，例如 `LOGIN_SUCCESS` |
+| `target_username` | 被操作的帳號 |
+| `ip_address`、`device_info` | 來源 IP 與瀏覽器資訊 |
+| `details` | JSON 格式的操作細節 |
+| `created_at` | 發生時間 |
+
+#### `login_attempts`：登入失敗節流
+
+| 欄位 | 說明 |
+|---|---|
+| `username`、`ip_hash` | 複合主鍵；帳號與來源 IP 的 SHA-256 雜湊（不存明碼 IP） |
+| `failed_attempts` | 目前窗口內的失敗次數 |
+| `window_started_at` | 計數窗口開始時間（Unix 時間戳，窗口 15 分鐘） |
+| `blocked_until` | 鎖定截止時間；`0` 表示未鎖定 |
+| `updated_at` | 最後更新時間，用於清理超過 24 小時的舊資料 |
+
+連續失敗 5 次會鎖定 15 分鐘，登入成功即清除該筆。僅密碼登入使用，Google 登入不經過此表。若測試帳號被鎖定，可執行 `DELETE FROM login_attempts;` 解除。
+
+### 訓練成效
+
+#### `game_records`：遊戲結算紀錄
+
+| 欄位 | 說明 |
+|---|---|
+| `record_id` | 主鍵 |
+| `user_id` | 遊玩者，參照 `users.user_id`；使用者被刪除時一併刪除紀錄 |
+| `difficulty` | 使用的難度編號（對應 `difficulty_configs.diff_id`） |
+| `survival_time` | 存活秒數 |
+| `final_score` | 分數，由伺服器依存活時間與結局計算 |
+| `end_reason` | 結局：`SUCCESS`、`FAILURE_RESOURCE`、`FAILURE_CRACKED`、`FAILURE_OVERLOAD` |
+| `action_logs` | JSON 陣列，玩家輸入的指令（`time`、`cmd`、`timer_left`），供教師回放 |
+| `played_at` | 結算時間 |
+
+索引：`played_at` 與 `(user_id, played_at)`，供分頁與依學生查詢使用。
+
+### 難度與題庫
+
+#### `difficulty_configs`：訓練難度
+
+| 欄位 | 說明 |
+|---|---|
+| `diff_id` | 主鍵；`0`、`1`、`2` 為系統預設難度 |
+| `name`、`description` | 顯示名稱與說明 |
+| `owner_user_id` | 擁有者教師；`NULL` 表示系統預設難度，所有核准學生皆可使用 |
+| `total_time` | 訓練總秒數 |
+| `attack_rates` | JSON，各攻擊類型（`syn`、`udp`、`dns`、`icmp`、`fishing`、`none`）對應的隨機數區間 |
+| `command_policy` | JSON，各終端機指令是否啟用 |
+| `attack_policy` | JSON，各攻擊類型是否啟用 |
+| `game_settings` | JSON，攻擊冷卻、傷害倍率、破解速度、初始負載、密碼規則與字典攻擊設定 |
+| `is_active` | 是否啟用 |
+| `created_at`、`updated_at` | 建立與更新時間 |
+
+#### `difficulty_assignments`：教師自訂難度分配
+
+| 欄位 | 說明 |
+|---|---|
+| `assignment_id` | 主鍵 |
+| `difficulty_id` | 被分配的難度，參照 `difficulty_configs.diff_id` |
+| `student_id` | 取得使用權的學生，參照 `users.user_id` |
+| `assigned_by` | 分配的教師，參照 `users.user_id` |
+| `assigned_at` | 分配時間 |
+
+`(difficulty_id, student_id)` 唯一。學生只能使用教師明確分配給自己的自訂難度；伺服器在取得難度清單與結算時都會檢查此表。
+
+#### `threat_ips`：惡意 IP 題庫
+
+`ip_address`、`attack_type`（如 SYN、UDP、DNS、ICMP）、`payload_desc`（封包特徵說明）與 `is_active`。遊戲產生攻擊封包，並在 `whois` 分析時使用。
+
+#### `vip_ips`：正常業務 IP（誤殺陷阱）
+
+`ip_address` 與 `description`。這些來源屬於正常業務，若被誤封鎖會扣分。
+
+#### `phishing_emails`：郵件題庫
+
+`sender`、`subject`、`content` 與 `is_malicious`（`1` 為釣魚信，`0` 為正常信），用於社交工程訓練。
+
+### 預設資料
+
+`sql.txt` 只在資料不存在時新增三個預設難度、威脅 IP、VIP IP 與郵件，重複匯入不會覆寫或清除任何現有資料。
+
 ## 安裝與啟動
 
 ### 1. 下載專案
@@ -79,6 +201,10 @@ CREATE DATABASE soc_training_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
 ```bash
 mysql -u root -p soc_training_db < sql.txt
 ```
+
+`sql.txt` 的預設難度、威脅 IP、VIP IP 與郵件種子會在資料不存在時才新增；重複匯入不會清除教師難度、學生分配或管理員維護的題庫內容。
+
+既有資料庫部署時也需匯入更新後的 `sql.txt`，以建立登入節流所需的 `login_attempts` 表。既有 `game_records` 表不會因 `CREATE TABLE IF NOT EXISTS` 自動補上新索引；請確認 `played_at` 與 `(user_id, played_at)` 索引是否存在，缺少時再手動新增。
 
 接著檢查 [api/core/db_connect.php](api/core/db_connect.php) 的資料庫主機、帳號、密碼與資料庫名稱。
 
@@ -116,6 +242,17 @@ http://localhost/Cybersecurity-Defense-Training-System/assets/html/login.html
 
 網站必須透過 PHP 伺服器開啟，不能直接用 `file://` 開啟 PHP 或需要 Session 的頁面。
 
+### 部署與資源快取
+
+- 訓練頁只允許已登入的學生、教師與管理員開啟，並對頁面設定不快取、禁止嵌入及基本安全回應標頭。
+- 難度選單使用精簡資料庫查詢與回應；同一頁面工作階段只載入一次目錄，開始訓練時才讀取威脅與郵件題庫。
+- 本機 CSS 與 JavaScript 模組及其相依檔案使用 SHA-256 內容雜湊版本，部署更新後可避免瀏覽器混用舊模組。
+- Chart.js 與 Font Awesome 使用 CDN，部署環境需能連線至 jsDelivr 與 cdnjs；Chart.js 固定使用 4.4.7。
+- JSON API 回應設定禁止快取；訓練紀錄採分頁讀取，回放時才另外取得單筆操作日誌。
+- 遊戲主頁的 CSP 限制腳本來源，並使用 nonce 授權 import map；管理控制台頁面尚保留舊式 inline 腳本，需另行遷移後才能套用同等嚴格的 `script-src`。
+- 密碼登入同一帳號／來源 IP 連續失敗 5 次會暫停 15 分鐘；SQL 初始化需建立 `login_attempts` 表。此節流是應用層補強，不取代部署端防暴力破解與監控。
+- 結算 API 會驗證時間、結局與操作日誌格式，分數依通過的存活時間及結局計算。遊戲仍在瀏覽器執行，不能將客戶端回報的存活時間與結局視為具防竄改的競賽成績。
+
 ## Google OAuth 設定
 
 在 Google Cloud Console 的 OAuth 用戶端，加入與實際網址完全一致的「已授權的重新導向 URI」。Apache 本機環境通常使用：
@@ -147,8 +284,8 @@ OAuth 主要檔案：
 
 1. 開啟登入頁並註冊帳號，或使用 Google 登入。
 2. 管理員可在「帳號清單與審核」中管理教師／學生帳號、修改登入密碼，並在「動態題庫管理」中維護郵件題目。
-3. 教師進入管理後台的「我的訓練難度」，建立難度並設定指令與攻擊開關。
-4. 學生完成教師綁定並通過核准後，會自動看到該教師啟用中的自訂難度；教師可在學生列表進一步調整分配。
+3. 教師進入管理後台的「我的訓練難度」，建立難度並設定指令與攻擊開關，再將難度分配給指定學生。
+4. 學生完成教師綁定並通過核准後，只會看到該教師明確分配給自己的啟用中自訂難度。
 5. 學生在控制台查看目前綁定教師，選擇可用的教師難度開始訓練。
 6. 從 [index.php](index.php) 選擇可用難度並確認任務簡報。
 7. 依序觀察警報、分析流量、執行防禦指令與處理郵件。
@@ -181,7 +318,7 @@ OAuth 主要檔案：
 | `whois [IP/協定]` | 分析可疑 IP 或協定 |
 | `limit [協定]` | 暫時限制指定協定流量 |
 | `block [IP/協定]` | 建立防火牆阻擋規則 |
-| `unblock [IP/協定]` | 解除封鎖或限速 |
+| `unblock [IP/協定]` | 移除指定 IP／協定的封鎖規則或解除限速 |
 | `flush-dns` | 清除 DNS 快取 |
 | `scan-mail` | 掃描並隔離釣魚郵件 |
 | `passwd` | 重置密碼破解進度 |

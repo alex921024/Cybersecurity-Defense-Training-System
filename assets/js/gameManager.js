@@ -71,7 +71,7 @@ class GameManager {
         }
 
         GameDB.difficulties = result.difficulties;
-        GameDB.maliciousIPs = result.maliciousIPs;
+        GameDB.threats = Array.isArray(result.threats) ? result.threats : [];
         GameDB.vipIPs = result.vipIPs;
         GameDB.emails = result.emails;
 
@@ -344,6 +344,23 @@ class GameManager {
         this.syncPolicyButtons();
     }
 
+    getThreatByIp(ip) {
+        const normalizedIp = String(ip).toLowerCase();
+        return (GameDB.threats || []).find(threat =>
+            String(threat.ip_address).toLowerCase() === normalizedIp
+        );
+    }
+
+    escapeHTML(value) {
+        return String(value).replace(/[&<>"']/g, character => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        })[character]);
+    }
+
     analyzeThreat(target) {
         if (!this.isCommandEnabled('whois')) {
             return "[拒絕執行] 此訓練難度未啟用 whois 指令。";
@@ -353,26 +370,27 @@ class GameManager {
         if (!cleanTarget) return "請輸入有效的 IP 或協定名稱。";
 
         const resultEl = document.getElementById('analyzer-result');
-        if (resultEl) resultEl.innerHTML = `<span style="color:#888;">[查詢中] 正在透過情報庫檢索 ${cleanTarget}...</span>`;
+        if (resultEl) resultEl.innerHTML = `<span style="color:#888;">[查詢中] 正在透過情報庫檢索 ${this.escapeHTML(cleanTarget)}...</span>`;
 
         setTimeout(() => {
             let outputMsg = "";
-            if (cleanTarget === this.activeThreat || cleanTarget === 'ip' || GameDB.maliciousIPs.includes(cleanTarget)) {
-                if (cleanTarget === 'syn' || GameDB.maliciousIPs.includes(cleanTarget)) this.analyzedTargets.add('ip'); 
+            const threat = this.getThreatByIp(cleanTarget);
+            if (cleanTarget === this.activeThreat || cleanTarget === 'ip' || threat) {
+                if (cleanTarget === 'syn' || threat) this.analyzedTargets.add('ip');
                 
                 const ipRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
                 if (ipRegex.test(cleanTarget) && !this.discoveredIPs.has(cleanTarget)) {
-                    let detectedType = 'APT/Malware';
-                    if (this.activeThreat && this.activeThreat !== 'fishing' && this.activeThreat !== 'dns') {
+                    let detectedType = threat ? threat.attack_type.toUpperCase() : 'APT/Malware';
+                    if (!threat && this.activeThreat && this.activeThreat !== 'fishing' && this.activeThreat !== 'dns') {
                         detectedType = this.activeThreat.toUpperCase();
-                    } else if (cleanTarget === 'dns') {
+                    } else if (!threat && cleanTarget === 'dns') {
                         detectedType = 'DNS';
                     }
                     this.discoveredIPs.set(cleanTarget, { status: 'active', type: detectedType });
                     this.renderThreatIntel(); 
                 }
                 
-                outputMsg = `[分析結果 - 高危險] <br>目標: ${cleanTarget.toUpperCase()}<br>狀態: 偵測到惡意 Payload。<br>建議行動: 立即進行阻斷 (Block)。`;
+                outputMsg = `[分析結果 - 高危險] <br>目標: ${this.escapeHTML(cleanTarget.toUpperCase())}<br>狀態: 偵測到惡意 Payload。<br>建議行動: 立即進行阻斷 (Block)。`;
                 this.updateIdsAlert(`[情報解鎖] 已確認 ${cleanTarget.toUpperCase()} 為惡意來源，授權進行攔截。`);
                 this.logTerminal(`[Whois 分析] 檢索結果：${cleanTarget.toUpperCase()} 具高風險，授權封鎖！`, "system");
             }
@@ -382,12 +400,12 @@ class GameManager {
                 this.logTerminal(`[Whois 分析] 檢索結果：DNS 遭到污染，授權清理。`, "system");
             } 
             else {
-                outputMsg = `[分析結果 - 安全] <br>目標: ${cleanTarget.toUpperCase()}<br>狀態: 目前未發現明顯的威脅情報。`;
+                outputMsg = `[分析結果 - 安全] <br>目標: ${this.escapeHTML(cleanTarget.toUpperCase())}<br>狀態: 目前未發現明顯的威脅情報。`;
                 this.logTerminal(`[Whois 分析] 檢索結果：${cleanTarget.toUpperCase()} 狀態正常。`, "system");
             }
 
             if (resultEl) resultEl.innerHTML = outputMsg;
-            if (cleanTarget === this.activeThreat || GameDB.maliciousIPs.includes(cleanTarget)) {
+            if (cleanTarget === this.activeThreat || threat) {
                 this.updateMissionPanel('分析完成', '透過 whois 分析確認惡意來源，請立即封鎖或執行對應防禦。', '攻擊來源已確認，可以使用 block 或 unblock 解除副作用。', 3);
             }
         }, 800);
@@ -461,7 +479,7 @@ class GameManager {
             return `[警告] 已粗暴阻斷 ${cleanArg.toUpperCase()}。攻擊暫緩，但業務受損！查出 IP 封鎖後請用 'unblock ${cleanArg}' 解除，以免系統持續耗損。`;
         }
 
-        if (GameDB.maliciousIPs.includes(cleanArg) || this.analyzedTargets.has(cleanArg)) {
+        if (this.getThreatByIp(cleanArg) || this.analyzedTargets.has(cleanArg)) {
             if (cleanArg === 'ip' && this.discoveredIPs.size > 0) {
                 let resolved = false;
                 this.discoveredIPs.forEach((info, ip) => {
@@ -512,6 +530,25 @@ class GameManager {
 
         const cleanArg = arg.toLowerCase().trim();
         let msg = "";
+        const ruleTarget = `${cleanArg} (all)`;
+        const matchingRules = this.activeRules.filter(rule =>
+            rule.action === 'DROP' &&
+            (rule.target.toLowerCase() === cleanArg || rule.target.toLowerCase() === ruleTarget)
+        );
+        if (matchingRules.length > 0) {
+            this.activeRules = this.activeRules.filter(rule =>
+                rule.action !== 'DROP' ||
+                (rule.target.toLowerCase() !== cleanArg && rule.target.toLowerCase() !== ruleTarget)
+            );
+            const discovered = this.discoveredIPs.get(cleanArg);
+            if (discovered && discovered.status === 'blocked') {
+                discovered.status = 'active';
+                this.discoveredIPs.set(cleanArg, discovered);
+                this.renderThreatIntel();
+            }
+            this.renderRulesGUI();
+            msg += `[解除規則] 已移除 ${cleanArg.toUpperCase()} 的封鎖規則。 `;
+        }
         
         const blockIndex = this.activeSideEffects.indexOf(cleanArg);
         if (blockIndex > -1) {
@@ -529,7 +566,7 @@ class GameManager {
             this.updateIdsAlert(msg);
             return `[執行成功] ${msg}`;
         }
-        return `[提示] 目前沒有針對 ${cleanArg} 執行全域封鎖或限速。`;
+        return `[提示] 目前沒有針對 ${cleanArg} 執行封鎖或限速。`;
     }
 
     applyFlushDns() {
@@ -572,7 +609,7 @@ class GameManager {
 
     updateIdsAlert(msg) {
         const logEl = document.getElementById('ids-alert-log');
-        if (logEl) logEl.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}\n` + logEl.innerHTML;
+        if (logEl) logEl.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + logEl.textContent;
     }
 
     renderRulesGUI() {
@@ -584,9 +621,9 @@ class GameManager {
         }
         tbody.innerHTML = this.activeRules.map(r => `
             <tr>
-                <td><code>${r.id}</code></td>
-                <td><span style="color:#ffaa00;">${r.target}</span></td>
-                <td><span style="color:#ff4444; font-weight:bold;">${r.action}</span></td>
+                <td><code>${this.escapeHTML(r.id)}</code></td>
+                <td><span style="color:#ffaa00;">${this.escapeHTML(r.target)}</span></td>
+                <td><span style="color:#ff4444; font-weight:bold;">${this.escapeHTML(r.action)}</span></td>
                 <td><span style="color:#00ff00;">ACTIVE</span></td>
             </tr>
         `).join('');
@@ -627,7 +664,7 @@ class GameManager {
 
         if (hasActive) {
             html += `<div style="margin-bottom: 12px;">
-                        <button onclick="window.gameManagerInstance.blockAllActive()" style="background: #d93025; color: #fff; border: 1px solid #ff4444; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; width: 100%; transition: 0.2s;">
+                        <button data-block-all-active style="background: #d93025; color: #fff; border: 1px solid #ff4444; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px; width: 100%; transition: 0.2s;">
                             <i class="fas fa-ban"></i> 一鍵封鎖所有已分析危險 IP
                         </button>
                      </div>`;
@@ -635,13 +672,17 @@ class GameManager {
 
         for (const [attackType, items] of Object.entries(groups)) {
             html += `<div class="intel-group">
-                        <strong class="intel-group-title">${attackType} 攻擊偵測</strong>`;
+                        <strong class="intel-group-title">${this.escapeHTML(attackType)} 攻擊偵測</strong>`;
             
             items.forEach(item => {
                 const isBlocked = item.status === 'blocked';
-                const action = isBlocked ? '' : `onclick="window.quickCmd('block ${item.ip}')" title="點擊立即單獨封鎖此 IP"`;
+                const action = isBlocked
+                    ? ''
+                    : `role="button" tabindex="0" data-block-ip="${this.escapeHTML(item.ip)}" title="點擊立即單獨封鎖此 IP"`;
                 const statusClass = isBlocked ? 'intel-tag blocked' : 'intel-tag';
-                const labelText = isBlocked ? `${item.ip} (已封鎖)` : item.ip;
+                const labelText = isBlocked
+                    ? `${this.escapeHTML(item.ip)} (已封鎖)`
+                    : this.escapeHTML(item.ip);
                 
                 html += `<span class="${statusClass}" ${action}>${labelText}</span>`;
             });
@@ -649,6 +690,17 @@ class GameManager {
         }
 
         listEl.innerHTML = html;
+        listEl.querySelector('[data-block-all-active]')?.addEventListener('click', () => this.blockAllActive());
+        listEl.querySelectorAll('[data-block-ip]').forEach(item => {
+            const block = () => window.quickCmd(`block ${item.dataset.blockIp}`);
+            item.addEventListener('click', block);
+            item.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    block();
+                }
+            });
+        });
 
         ['udp', 'icmp', 'dns', 'ip'].forEach(t => {
             const btn = document.getElementById(`btn-mitigate-${t}`);
@@ -725,11 +777,11 @@ class GameManager {
             if(!mail.read) unread++;
             const div = document.createElement('div');
             div.className = `mail-item ${mail.read ? 'read' : 'unread'}`;
-            div.onclick = () => this.viewMail(mail.id);
+            div.addEventListener('click', () => this.viewMail(mail.id));
             div.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px;">
-                    <strong>${mail.sender}</strong>
+                    <strong>${this.escapeHTML(mail.sender)}</strong>
                 </div>
-                <div style="font-size:0.9em; color:#c1d5ff;">${mail.subject}</div>
+                <div style="font-size:0.9em; color:#c1d5ff;">${this.escapeHTML(mail.subject)}</div>
                 <div style="font-size:0.8em; color:#888; margin-top:6px;">${mail.read ? '已查看' : '未查看'}</div>`;
             list.appendChild(div);
         });
@@ -744,12 +796,15 @@ class GameManager {
         this.renderMailList();
         const viewer = document.getElementById('mail-viewer-container');
         if (viewer) viewer.innerHTML = `
-            <div class="mail-header"><h3>${mail.subject}</h3><p><strong>寄件者:</strong> ${mail.sender}</p></div>
-            <div class="mail-body"><p>${mail.content.replace(/\n/g, '<br>')}</p></div>
+            <div class="mail-header"><h3>${this.escapeHTML(mail.subject)}</h3><p><strong>寄件者:</strong> ${this.escapeHTML(mail.sender)}</p></div>
+            <div class="mail-body"><p>${this.escapeHTML(mail.content).replace(/\n/g, '<br>')}</p></div>
             <div class="mail-actions">
-                <button class="btn-delete" onclick="window.handleMail(${mail.id}, 'delete')">刪除信件 (安全)</button>
-                <button class="btn-click" onclick="window.handleMail(${mail.id}, 'click')">點擊連結 / 回覆 (執行)</button>
+                <button class="btn-delete" data-mail-action="delete">刪除信件 (安全)</button>
+                <button class="btn-click" data-mail-action="click">點擊連結 / 回覆 (執行)</button>
             </div>`;
+        viewer?.querySelectorAll('[data-mail-action]').forEach(button => {
+            button.addEventListener('click', () => this.handleMail(mail.id, button.dataset.mailAction));
+        });
     }
 
     handleMail(id, action) {
@@ -812,10 +867,18 @@ class GameManager {
         let allIPs = GameDB.vipIPs ? [...GameDB.vipIPs] : [];
         allIPs = allIPs.concat([`192.168.1.${Math.floor(Math.random()*255)}`]);
         
-        const srcIP = isAttack ? GameDB.maliciousIPs[Math.floor(Math.random() * GameDB.maliciousIPs.length)] : allIPs[Math.floor(Math.random() * allIPs.length)];
-        
         const normalProtos = ["TCP", "UDP", "HTTP", "DNS", "ICMP"];
         const proto = isAttack ? this.activeThreat.toUpperCase() : normalProtos[Math.floor(Math.random() * normalProtos.length)];
+        const attackType = proto.toLowerCase();
+        const attackThreats = isAttack
+            ? (GameDB.threats || []).filter(threat => String(threat.attack_type).toLowerCase() === attackType)
+            : [];
+        const selectedThreat = attackThreats.length > 0
+            ? attackThreats[Math.floor(Math.random() * attackThreats.length)]
+            : null;
+        const srcIP = selectedThreat
+            ? selectedThreat.ip_address
+            : (isAttack ? '203.0.113.1' : allIPs[Math.floor(Math.random() * allIPs.length)]);
         
         let srcPort = Math.floor(Math.random() * 55535 + 10000).toString();
         let destPort = proto === 'HTTP' ? "80" : proto === 'DNS' ? "53" : "443";
@@ -823,7 +886,9 @@ class GameManager {
 
         const len = isAttack ? Math.floor(Math.random() * 1500 + 1000) : Math.floor(Math.random() * 200 + 40);
         
-        let payloadData = isAttack && GameDB.payloads.malicious[proto.toLowerCase()] ? GameDB.payloads.malicious[proto.toLowerCase()] : GameDB.payloads.normal[Math.floor(Math.random() * GameDB.payloads.normal.length)];
+        let payloadData = selectedThreat && selectedThreat.payload_desc
+            ? selectedThreat.payload_desc
+            : GameDB.payloads.normal[Math.floor(Math.random() * GameDB.payloads.normal.length)];
         
         this.packetHistory.unshift({ time, srcIP, srcPort, destIP: '10.0.0.1', destPort, proto, len, isAttack, payload: payloadData });
         
@@ -850,7 +915,7 @@ class GameManager {
             const tr = document.createElement('tr');
             tr.className = p.isAttack ? 'packet-danger' : `proto-${p.proto.toLowerCase().replace('.', '')}`;  
             const srcIpClass = p.isAttack ? 'warn-ip' : '';
-            tr.innerHTML = `<td>${p.time}</td><td class="${srcIpClass}"><strong>${p.srcIP}</strong></td><td>${p.srcPort}</td><td>${p.destIP}</td><td style="color:#0077aa; font-weight:bold;">${p.destPort}</td><td>${p.proto}</td><td>${p.len}</td><td>${p.isAttack ? 'Malicious' : 'Standard'}</td>`;
+            tr.innerHTML = `<td>${this.escapeHTML(p.time)}</td><td class="${srcIpClass}"><strong>${this.escapeHTML(p.srcIP)}</strong></td><td>${this.escapeHTML(p.srcPort)}</td><td>${this.escapeHTML(p.destIP)}</td><td style="color:#0077aa; font-weight:bold;">${this.escapeHTML(p.destPort)}</td><td>${this.escapeHTML(p.proto)}</td><td>${Number(p.len)}</td><td>${p.isAttack ? 'Malicious' : 'Standard'}</td>`;
             
             tr.onclick = () => {
                 document.querySelectorAll('#packet-list tr').forEach(row => row.classList.remove('selected-packet'));
@@ -863,14 +928,17 @@ class GameManager {
                     payloadContent.innerHTML = `
 <div style="margin-bottom: 10px; display: flex; align-items: center;">
     <span style="color:#aaa;">[來源 IP]</span> 
-    <span onclick="quickAnalyze('${p.srcIP}')" style="cursor:pointer; background:#ffcc00; padding:2px 8px; border-radius:3px; color:#000; font-weight:bold; font-size:12px; box-shadow: 0 0 5px rgba(255, 204, 0, 0.6); display:inline-block; width: fit-content; margin-left: 8px;">
+    <span data-analyze-ip="${this.escapeHTML(p.srcIP)}" style="cursor:pointer; background:#ffcc00; padding:2px 8px; border-radius:3px; color:#000; font-weight:bold; font-size:12px; box-shadow: 0 0 5px rgba(255, 204, 0, 0.6); display:inline-block; width: fit-content; margin-left: 8px;">
         ${p.srcIP} [分析]
     </span>${hint}
 </div>
 <div style="margin-bottom: 4px;"><span style="color:#aaa;">[目標埠口]</span> <span style="color:#fff;">${p.destPort}</span></div>
 <div style="margin-bottom: 12px;"><span style="color:#aaa;">[封包大小]</span> <span style="color:#fff;">${p.len} bytes</span></div>
 <div style="color:#aaa; border-bottom: 1px solid #444; padding-bottom: 4px; margin-bottom: 6px;">[Payload 內容擷取]</div>
-<div style="color: ${p.isAttack ? '#ff5555' : '#55ff55'}; word-wrap: break-word; font-size: 13px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #333;">${p.payload}</div>`;
+<div style="color: ${p.isAttack ? '#ff5555' : '#55ff55'}; word-wrap: break-word; font-size: 13px; background: #111; padding: 8px; border-radius: 4px; border: 1px solid #333;">${this.escapeHTML(p.payload)}</div>`;
+                    payloadContent.querySelector('[data-analyze-ip]')?.addEventListener('click', event => {
+                        window.quickAnalyze(event.currentTarget.dataset.analyzeIp);
+                    });
                 }
             };
             list.appendChild(tr);
@@ -912,7 +980,7 @@ class GameManager {
 
         const prefix = type === "user" ? "root@sec-server:~# " : "";
         const color = type === "alert" ? "color:#ffaa00; font-weight:bold;" : type === "success" ? "color:#00ff00; font-weight:bold;" : type === "danger" ? "color:#ff0000; font-weight:bold;" : type === "warning" ? "color:#ff9900;" : "color:#00FF00;";
-        out.innerHTML += `<div style="${color} margin-bottom: 4px;">${prefix}${msg}</div>`;
+            out.innerHTML += `<div style="${color} margin-bottom: 4px;">${this.escapeHTML(prefix + msg)}</div>`;
         out.scrollTop = out.scrollHeight;
         if (type === 'alert' || type === 'danger') this.showNotification(msg, type === 'alert' ? 'danger' : 'danger');
     }
@@ -931,12 +999,13 @@ class GameManager {
         const maxTime = this.difficultyConfig ? this.difficultyConfig.time : 240;
         const survivalTime = maxTime - (this.status ? this.status.timer : 0);
         // 簡單計分公式：存活秒數 * 10，若破關則額外加 1000 分
-        const finalScore = (survivalTime * 10) + (reason === "SUCCESS" ? 1000 : 0) + (this.stats.mailCorrect * 50) - (this.stats.mailWrong * 50);
+        const finalScore = (survivalTime * 10) + (reason === "SUCCESS" ? 1000 : 0);
         this.stats.mailUnanswered = Math.max(0, this.stats.mailReceived - this.stats.mailHandled);
 
         // 2. 透過 API 儲存至資料庫
+        let saveMessage = '訓練紀錄已存檔。';
         try {
-            await fetch('api/student/save_record.php', {
+            const response = await fetch('api/student/save_record.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -947,9 +1016,13 @@ class GameManager {
                     action_logs: this.actionLogs || []
                 })
             });
-            console.log("遊戲紀錄已成功傳送至資料庫");
+            const result = await response.json();
+            if (!response.ok || result.status !== 'success') {
+                throw new Error(result.message || `伺服器回應 ${response.status}`);
+            }
         } catch (error) {
             console.error("存檔失敗:", error);
+            saveMessage = '訓練紀錄未能存檔，請聯絡管理員並提供時間資訊。';
         }
 
         this.gamePassword = '';
@@ -962,7 +1035,7 @@ class GameManager {
             if(titleEl) { titleEl.innerText = results[reason].title; titleEl.style.color = results[reason].color; }
             
             const reasonEl = document.getElementById('game-over-reason'); 
-            if(reasonEl) reasonEl.innerText = `${results[reason].desc} 郵件統計：已處理 ${this.stats.mailHandled} 封，未處理 ${this.stats.mailUnanswered} 封，正確 ${this.stats.mailCorrect} 封，錯誤 ${this.stats.mailWrong} 封。`;
+            if(reasonEl) reasonEl.innerText = `${results[reason].desc} ${saveMessage} 郵件統計：已處理 ${this.stats.mailHandled} 封，未處理 ${this.stats.mailUnanswered} 封，正確 ${this.stats.mailCorrect} 封，錯誤 ${this.stats.mailWrong} 封。`;
             
             const modalEl = document.getElementById('game-over-modal'); 
             if(modalEl) modalEl.classList.remove('hidden');
@@ -993,7 +1066,7 @@ class GameManager {
     showNotification(message, type = 'danger') {
         let container = document.getElementById('game-notification-container');
         if (!container) { container = document.createElement('div'); container.id = 'game-notification-container'; document.getElementById('game-screen').appendChild(container); }
-        const toast = document.createElement('div'); toast.className = `game-toast ${type}`; toast.innerHTML = `<strong>系統</strong> ${message}`;
+        const toast = document.createElement('div'); toast.className = `game-toast ${type}`; toast.innerHTML = `<strong>系統</strong> ${this.escapeHTML(message)}`;
         container.appendChild(toast); setTimeout(() => { toast.classList.add('toast-fade-out'); setTimeout(() => toast.remove(), 500); }, 3000);
     }
 

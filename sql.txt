@@ -48,6 +48,18 @@ CREATE TABLE IF NOT EXISTS account_operation_logs (
     FOREIGN KEY (operator_id) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 登入失敗節流：每個帳號與來源 IP 雜湊分開計數。
+CREATE TABLE IF NOT EXISTS login_attempts (
+    username VARCHAR(50) NOT NULL,
+    ip_hash CHAR(64) NOT NULL,
+    failed_attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    window_started_at INT UNSIGNED NOT NULL,
+    blocked_until INT UNSIGNED NOT NULL DEFAULT 0,
+    updated_at INT UNSIGNED NOT NULL,
+    PRIMARY KEY (username, ip_hash),
+    KEY idx_login_attempts_updated_at (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- =========================================
 -- 二、 遊戲成效與操作統計
 -- =========================================
@@ -62,6 +74,8 @@ CREATE TABLE IF NOT EXISTS game_records (
     end_reason VARCHAR(50) NOT NULL,
     action_logs JSON,
     played_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_game_records_played_at (played_at),
+    KEY idx_game_records_user_played_at (user_id, played_at),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -124,78 +138,117 @@ CREATE TABLE IF NOT EXISTS phishing_emails (
     is_malicious BOOLEAN NOT NULL DEFAULT FALSE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-
-
-DELETE FROM difficulty_assignments;
-DELETE FROM difficulty_configs;
 SET @previous_sql_mode = @@SESSION.sql_mode;
 SET SESSION sql_mode = CONCAT_WS(',', @@SESSION.sql_mode, 'NO_AUTO_VALUE_ON_ZERO');
 INSERT INTO difficulty_configs
     (diff_id, name, description, owner_user_id, total_time, attack_rates, command_policy, attack_policy, game_settings, is_active)
-VALUES
-(0, '基礎防禦', '系統預設入門難度', NULL, 300,
+SELECT 0, '基礎防禦', '系統預設入門難度', NULL, 300,
     '{"syn": [1, 2], "udp": [3, 4], "dns": null, "icmp": null, "fishing": [5, 6], "none": [7, 100]}',
     '{"status": true, "netstat": true, "whois": true, "limit": true, "block": true, "unblock": true, "flush-dns": true, "scan-mail": true, "passwd": true}',
     '{"syn": true, "udp": true, "icmp": false, "dns": false, "crack": true, "fishing": true}',
     '{"attack_cooldown": 12, "damage_multiplier": 1, "crack_speed": 1, "initial_load": {"cpu": 12, "gpu": 8, "ram": 25, "wifi": 5}, "password_policy": {"min_length": 8, "require_number": true, "require_uppercase": false, "require_symbol": false, "allow_change": true, "change_cooldown": 30}, "dictionary_attack": {"enabled": true, "speed_multiplier": 1}}',
-    TRUE),
-(1, '進階防禦', '系統預設進階難度', NULL, 360,
+    TRUE
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM difficulty_configs WHERE diff_id = 0);
+INSERT INTO difficulty_configs
+    (diff_id, name, description, owner_user_id, total_time, attack_rates, command_policy, attack_policy, game_settings, is_active)
+SELECT 1, '進階防禦', '系統預設進階難度', NULL, 360,
     '{"syn": [1, 2], "udp": [3, 4], "dns": [5, 6], "icmp": null, "fishing": [7, 8], "none": [9, 100]}',
     '{"status": true, "netstat": true, "whois": true, "limit": true, "block": true, "unblock": true, "flush-dns": true, "scan-mail": true, "passwd": true}',
     '{"syn": true, "udp": true, "icmp": false, "dns": true, "crack": true, "fishing": true}',
     '{"attack_cooldown": 12, "damage_multiplier": 1, "crack_speed": 1, "initial_load": {"cpu": 12, "gpu": 8, "ram": 25, "wifi": 5}, "password_policy": {"min_length": 8, "require_number": true, "require_uppercase": false, "require_symbol": false, "allow_change": true, "change_cooldown": 30}, "dictionary_attack": {"enabled": true, "speed_multiplier": 1}}',
-    TRUE),
-(2, '專家防禦', '系統預設專家難度', NULL, 480,
+    TRUE
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM difficulty_configs WHERE diff_id = 1);
+INSERT INTO difficulty_configs
+    (diff_id, name, description, owner_user_id, total_time, attack_rates, command_policy, attack_policy, game_settings, is_active)
+SELECT 2, '專家防禦', '系統預設專家難度', NULL, 480,
     '{"syn": [1, 3], "udp": [4, 5], "dns": [6, 7], "icmp": [8, 9], "fishing": [10, 12], "none": [13, 100]}',
     '{"status": true, "netstat": true, "whois": true, "limit": true, "block": true, "unblock": true, "flush-dns": true, "scan-mail": true, "passwd": true}',
     '{"syn": true, "udp": true, "icmp": true, "dns": true, "crack": true, "fishing": true}',
     '{"attack_cooldown": 12, "damage_multiplier": 1, "crack_speed": 1, "initial_load": {"cpu": 12, "gpu": 8, "ram": 25, "wifi": 5}, "password_policy": {"min_length": 8, "require_number": true, "require_uppercase": false, "require_symbol": false, "allow_change": true, "change_cooldown": 30}, "dictionary_attack": {"enabled": true, "speed_multiplier": 1}}',
-    TRUE);
+    TRUE
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM difficulty_configs WHERE diff_id = 2);
 SET SESSION sql_mode = @previous_sql_mode;
 
 
 -- 2. 匯入惡意 IP 題庫 (threat_ips)
--- 對應原本 database.js 的 maliciousIPs 與 payloads.malicious
-TRUNCATE TABLE threat_ips;
-INSERT INTO threat_ips (ip_address, attack_type, payload_desc, is_active) VALUES 
-('103.24.55.12', 'syn', '[SYN] Seq=0 Win=64240 Len=0 MSS=1460 (Possible SYN Flood)', 1),
-('45.22.19.8', 'udp', '0x0000:  ff ff ff ff ff ff ff ff ... (Garbage Data / UDP Flood)', 1),
-('188.166.25.190', 'icmp', 'ICMP Echo Request (id=0x9999, seq=999, ttl=64) (Large Payload/Flood)', 1),
-('8.8.8.8', 'dns', 'DNS Standard query response 0xabcd ANY (Amplification Attack Payload, Size: 4096 bytes)', 1),
-('167.99.14.22', 'syn', '[SYN] Seq=0 Win=64240 Len=0 MSS=1460 (Possible SYN Flood)', 1);
+-- 種子僅在相同 IP 與攻擊類型不存在時新增，不覆寫管理員維護的資料。
+INSERT INTO threat_ips (ip_address, attack_type, payload_desc, is_active)
+SELECT '103.24.55.12', 'syn', '[SYN] Seq=0 Win=64240 Len=0 MSS=1460 (Possible SYN Flood)', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM threat_ips WHERE ip_address = '103.24.55.12' AND attack_type = 'syn');
+INSERT INTO threat_ips (ip_address, attack_type, payload_desc, is_active)
+SELECT '45.22.19.8', 'udp', '0x0000:  ff ff ff ff ff ff ff ff ... (Garbage Data / UDP Flood)', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM threat_ips WHERE ip_address = '45.22.19.8' AND attack_type = 'udp');
+INSERT INTO threat_ips (ip_address, attack_type, payload_desc, is_active)
+SELECT '188.166.25.190', 'icmp', 'ICMP Echo Request (id=0x9999, seq=999, ttl=64) (Large Payload/Flood)', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM threat_ips WHERE ip_address = '188.166.25.190' AND attack_type = 'icmp');
+INSERT INTO threat_ips (ip_address, attack_type, payload_desc, is_active)
+SELECT '8.8.8.8', 'dns', 'DNS Standard query response 0xabcd ANY (Amplification Attack Payload, Size: 4096 bytes)', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM threat_ips WHERE ip_address = '8.8.8.8' AND attack_type = 'dns');
+INSERT INTO threat_ips (ip_address, attack_type, payload_desc, is_active)
+SELECT '167.99.14.22', 'syn', '[SYN] Seq=0 Win=64240 Len=0 MSS=1460 (Possible SYN Flood)', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM threat_ips WHERE ip_address = '167.99.14.22' AND attack_type = 'syn');
 
 
 -- 3. 匯入 VIP 正常業務 IP / 誤殺地雷 (vip_ips)
--- 對應原本 database.js 的 vipIPs
-TRUNCATE TABLE vip_ips;
-INSERT INTO vip_ips (ip_address, description) VALUES 
-('192.168.1.100', '內部核心資料庫主機 (切勿誤封鎖)'),
-('10.0.0.5', '辦公室網域閘道器'),
-('168.95.1.1', '外部網際網路 DNS 查詢節點');
+INSERT INTO vip_ips (ip_address, description)
+SELECT '192.168.1.100', '內部核心資料庫主機 (切勿誤封鎖)'
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM vip_ips WHERE ip_address = '192.168.1.100');
+INSERT INTO vip_ips (ip_address, description)
+SELECT '10.0.0.5', '辦公室網域閘道器'
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM vip_ips WHERE ip_address = '10.0.0.5');
+INSERT INTO vip_ips (ip_address, description)
+SELECT '168.95.1.1', '外部網際網路 DNS 查詢節點'
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM vip_ips WHERE ip_address = '168.95.1.1');
 
 
 -- 4. 匯入郵件題庫 (phishing_emails)
 -- 包含正常業務郵件 (is_malicious = 0) 與惡意釣魚郵件 (is_malicious = 1)
-TRUNCATE TABLE phishing_emails;
-
--- 【正常郵件】
-INSERT INTO phishing_emails (sender, subject, content, is_malicious) VALUES 
-('HR 部門', '本月出勤紀錄確認', '請同仁至差勤系統確認本月打卡紀錄是否有誤，若有請假未簽核請盡速處理。', 0),
-('IT Support', '系統例行維護通知', '伺服器將於本週五晚間進行系統升級，屆時內部網路將中斷 15 分鐘，請見諒。', 0),
-('總務處', '下午茶訂購統計', '各位同仁好，今天的下午茶是雞排配珍奶，請要訂購的同仁於下午兩點前至總務處登記。', 0),
-('系統自動通知', '成功：DB-01 每日備份報告', '系統排程通知：\n昨晚的資料庫排程備份已成功完成，共計 45GB，無錯誤日誌產生。', 0),
-('行銷部_林專員', 'Q3 行銷活動企劃書初稿', '各位好，附件是下季度的企劃書草案，請大家在週三前提供修改建議，我們預計週五開會討論。', 0),
-('AWS Billing', 'Amazon Web Services Invoice Available', '您本月的 AWS 服務帳單已結算，總計 $450.00 USD，款項將於三日內從系統預設之信用卡扣除。', 0),
-('法務部', '員工保密協議 (NDA) 條款更新', '配合最新個資法規範，公司已更新內部保密協議。請同仁有空時至內網 EIP 系統詳閱新版條款。', 0),
-('研發部_張經理', '專案開發進度週報', '本週進度符合預期，前端 UI 已經完成 80%，後端 API 正在進行壓力測試，感謝各位的努力。', 0);
-
--- 【惡意釣魚郵件】
-INSERT INTO phishing_emails (sender, subject, content, is_malicious) VALUES 
-('IT_Admin (外部)', '警告：您的網域密碼即將過期', '系統偵測到您的密碼將在 24 小時內過期。\n\n請立即點擊以下連結進行重置：\nhttp://sec-update-portal-login.com/reset\n\n若未完成，您的帳號將被永久凍結。', 1),
-('Apple_Support_Team', 'Apple ID 異常登入警告', '我們偵測到您的帳號在海外有異常登入嘗試。\n\n請回覆此郵件，並附上您的身分證件照片與原密碼以解鎖帳號。', 1),
-('財務部_王經理', 'RE: 2026年度財務報表 (機密)', '附件是今年的財務報表與員工薪資清單，請點擊連結下載查看：\nhttp://download-finance-report-2026.zip.exe \n\n請勿外流。', 1),
-('總經理 (CEO)', '急件！匯款指示 (人在外開會)', '我現在在外面與客戶開會，不方便接電話。\n\n請立刻幫我匯款 $15,000 美金到這個合作夥伴的帳戶，這是急件！匯款帳戶詳情請點擊下方連結確認：\nhttp://ceo-urgent-transfer-auth.com/doc', 1),
-('Microsoft 365 支援', '[重要] 您的信箱容量已滿', '您的企業信箱配額已達 99%。\n\n為避免無法收發客戶信件，請立即點擊此處升級您的儲存空間 (請注意網址拼字)：\nhttp://mircosoft-365-update.com/login', 1),
-('FedEx 快遞通知', '包裹投遞失敗通知 (追蹤碼: TW8831994)', '您的包裹因地址錯誤無法投遞。\n\n請下載附件的電子託運單 (Shipping_Label.pdf.exe) 確認正確地址，並重新安排配送時間。', 1),
-('人資部 (偽造)', '2026 年度調薪名單確認', '各位同仁好：\n附件是明年度的各部門調薪幅度與名單總表 (Salary_Adjustment_2026.xlsx.vbs)。\n請各主管下載後輸入員工編號確認是否有誤。', 1),
-('網路管理中心', 'VPN 憑證更新通知 (強制執行)', '因應近期資安威脅，公司 VPN 憑證已全面更新。\n\n請同仁務必於今日下班前點擊連結下載並安裝新版憑證，否則明日將無法連線至公司內網：\nhttp://vpn-cert-update-portal.net/download', 1);
+-- 以寄件者與主旨作為種子識別；重複匯入不清除或覆寫現有郵件。
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT 'HR 部門', '本月出勤紀錄確認', '請同仁至差勤系統確認本月打卡紀錄是否有誤，若有請假未簽核請盡速處理。', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = 'HR 部門' AND subject = '本月出勤紀錄確認');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT 'IT Support', '系統例行維護通知', '伺服器將於本週五晚間進行系統升級，屆時內部網路將中斷 15 分鐘，請見諒。', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = 'IT Support' AND subject = '系統例行維護通知');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT '總務處', '下午茶訂購統計', '各位同仁好，今天的下午茶是雞排配珍奶，請要訂購的同仁於下午兩點前至總務處登記。', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = '總務處' AND subject = '下午茶訂購統計');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT '系統自動通知', '成功：DB-01 每日備份報告', '系統排程通知：\n昨晚的資料庫排程備份已成功完成，共計 45GB，無錯誤日誌產生。', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = '系統自動通知' AND subject = '成功：DB-01 每日備份報告');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT '行銷部_林專員', 'Q3 行銷活動企劃書初稿', '各位好，附件是下季度的企劃書草案，請大家在週三前提供修改建議，我們預計週五開會討論。', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = '行銷部_林專員' AND subject = 'Q3 行銷活動企劃書初稿');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT 'AWS Billing', 'Amazon Web Services Invoice Available', '您本月的 AWS 服務帳單已結算，總計 $450.00 USD，款項將於三日內從系統預設之信用卡扣除。', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = 'AWS Billing' AND subject = 'Amazon Web Services Invoice Available');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT '法務部', '員工保密協議 (NDA) 條款更新', '配合最新個資法規範，公司已更新內部保密協議。請同仁有空時至內網 EIP 系統詳閱新版條款。', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = '法務部' AND subject = '員工保密協議 (NDA) 條款更新');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT '研發部_張經理', '專案開發進度週報', '本週進度符合預期，前端 UI 已經完成 80%，後端 API 正在進行壓力測試，感謝各位的努力。', 0
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = '研發部_張經理' AND subject = '專案開發進度週報');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT 'IT_Admin (外部)', '警告：您的網域密碼即將過期', '系統偵測到您的密碼將在 24 小時內過期。\n\n請立即點擊以下連結進行重置：\nhttp://sec-update-portal-login.com/reset\n\n若未完成，您的帳號將被永久凍結。', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = 'IT_Admin (外部)' AND subject = '警告：您的網域密碼即將過期');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT 'Apple_Support_Team', 'Apple ID 異常登入警告', '我們偵測到您的帳號在海外有異常登入嘗試。\n\n請回覆此郵件，並附上您的身分證件照片與原密碼以解鎖帳號。', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = 'Apple_Support_Team' AND subject = 'Apple ID 異常登入警告');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT '財務部_王經理', 'RE: 2026年度財務報表 (機密)', '附件是今年的財務報表與員工薪資清單，請點擊連結下載查看：\nhttp://download-finance-report-2026.zip.exe \n\n請勿外流。', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = '財務部_王經理' AND subject = 'RE: 2026年度財務報表 (機密)');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT '總經理 (CEO)', '急件！匯款指示 (人在外開會)', '我現在在外面與客戶開會，不方便接電話。\n\n請立刻幫我匯款 $15,000 美金到這個合作夥伴的帳戶，這是急件！匯款帳戶詳情請點擊下方連結確認：\nhttp://ceo-urgent-transfer-auth.com/doc', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = '總經理 (CEO)' AND subject = '急件！匯款指示 (人在外開會)');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT 'Microsoft 365 支援', '[重要] 您的信箱容量已滿', '您的企業信箱配額已達 99%。\n\n為避免無法收發客戶信件，請立即點擊此處升級您的儲存空間 (請注意網址拼字)：\nhttp://mircosoft-365-update.com/login', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = 'Microsoft 365 支援' AND subject = '[重要] 您的信箱容量已滿');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT 'FedEx 快遞通知', '包裹投遞失敗通知 (追蹤碼: TW8831994)', '您的包裹因地址錯誤無法投遞。\n\n請下載附件的電子託運單 (Shipping_Label.pdf.exe) 確認正確地址，並重新安排配送時間。', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = 'FedEx 快遞通知' AND subject = '包裹投遞失敗通知 (追蹤碼: TW8831994)');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT '人資部 (偽造)', '2026 年度調薪名單確認', '各位同仁好：\n附件是明年度的各部門調薪幅度與名單總表 (Salary_Adjustment_2026.xlsx.vbs)。\n請各主管下載後輸入員工編號確認是否有誤。', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = '人資部 (偽造)' AND subject = '2026 年度調薪名單確認');
+INSERT INTO phishing_emails (sender, subject, content, is_malicious)
+SELECT '網路管理中心', 'VPN 憑證更新通知 (強制執行)', '因應近期資安威脅，公司 VPN 憑證已全面更新。\n\n請同仁務必於今日下班前點擊連結下載並安裝新版憑證，否則明日將無法連線至公司內網：\nhttp://vpn-cert-update-portal.net/download', 1
+FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM phishing_emails WHERE sender = '網路管理中心' AND subject = 'VPN 憑證更新通知 (強制執行)');

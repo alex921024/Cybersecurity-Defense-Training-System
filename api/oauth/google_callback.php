@@ -13,12 +13,18 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 $state = $_GET['state'] ?? '';
+$expectedNonce = $_SESSION['google_oauth_state'] ?? '';
+unset($_SESSION['google_oauth_state']);
+$state = is_string($state) ? $state : '';
 $stateParts = explode('.', $state);
 $stateData = count($stateParts) === 3 ? $stateParts[0] . '.' . $stateParts[1] : '';
 $expectedSignature = $stateData === '' ? '' : hash_hmac('sha256', $stateData, $config['client_secret']);
 $issuedAt = (int) ($stateParts[1] ?? 0);
 if (
     count($stateParts) !== 3 ||
+    !is_string($expectedNonce) ||
+    $expectedNonce === '' ||
+    !hash_equals($expectedNonce, $stateParts[0]) ||
     !hash_equals($expectedSignature, $stateParts[2] ?? '') ||
     $issuedAt < time() - 600 ||
     $issuedAt > time() + 60

@@ -140,6 +140,11 @@
                             </tbody>
                         </table>
                     </div>
+                    <div style="display:flex; justify-content:center; align-items:center; gap:12px; margin-top:12px;">
+                        <button id="logs-prev-page" class="btn-action" onclick="loadActionLogs(currentLogsPage - 1)" disabled>上一頁</button>
+                        <span id="logs-page-status" aria-live="polite">第 1 / 1 頁</span>
+                        <button id="logs-next-page" class="btn-action" onclick="loadActionLogs(currentLogsPage + 1)" disabled>下一頁</button>
+                    </div>
                 </div>
                 
                 <!-- 右側：虛擬終端機回放畫面 -->
@@ -346,6 +351,7 @@
         let currentUserId = null;
         let performanceChartInstance = null; 
         let allGameRecords = []; 
+        let currentLogsPage = 1;
         let difficultyConfigs = [];
         let editingDifficultyId = null;
         let difficultyAssignmentData = { difficulties: [], students: [] };
@@ -688,13 +694,13 @@
 
         async function loadAnalytics(studentId = null, studentName = null) {
             try {
-                let apiUrl = '../../api/admin/get_records.php';
-                if (studentId) {
-                    apiUrl += `?student_id=${studentId}`;
-                }
+                const params = new URLSearchParams({ limit: '20' });
+                if (studentId) params.set('student_id', String(studentId));
+                const apiUrl = `../../api/admin/get_records.php?${params}`;
 
                 const response = await fetch(apiUrl);
                 const result = await response.json();
+                if (!response.ok || result.status !== 'success') throw new Error(result.message || '訓練紀錄讀取失敗');
                 
                 const container = document.querySelector('.chart-container');
                 const titleEl = document.getElementById('analytics-title');
@@ -723,7 +729,7 @@
                     const ctx = document.getElementById('performanceChart').getContext('2d');
                     const data = result.data.slice(0, 20); 
                     
-                    const labels = data.map(r => `${r.username} (Diff ${r.difficulty})`);
+                    const labels = data.map(r => `${escapeHtml(r.username)} (Diff ${r.difficulty})`);
                     const scores = data.map(r => r.final_score || r.survival_time);
                     
                     if(performanceChartInstance) performanceChartInstance.destroy();
@@ -759,74 +765,87 @@
         // ==========================================
         // 5. 操作日誌回放邏輯
         // ==========================================
-        async function loadActionLogs() {
+        async function loadActionLogs(page = 1) {
             try {
-                    const response = await fetch('../../api/admin/get_records.php');
+                const requestedPage = Math.max(1, Number(page) || 1);
+                const response = await fetch(`../../api/admin/get_records.php?page=${requestedPage}&limit=25`);
                 const result = await response.json();
+                if (!response.ok || result.status !== 'success') throw new Error(result.message || '操作紀錄讀取失敗');
                 
                 const tbody = document.getElementById('logs-table-body');
                 tbody.innerHTML = '';
                 
-                if (result.status === 'success') {
-                    allGameRecords = result.data;
-                    
-                    if (allGameRecords.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">暫無遊戲紀錄</td></tr>';
-                        return;
-                    }
+                allGameRecords = result.data;
+                currentLogsPage = result.pagination.page;
+                const pageStatus = document.getElementById('logs-page-status');
+                const previousButton = document.getElementById('logs-prev-page');
+                const nextButton = document.getElementById('logs-next-page');
+                if (pageStatus) pageStatus.textContent = `第 ${currentLogsPage} / ${Math.max(1, result.pagination.pages)} 頁（共 ${result.pagination.total} 筆）`;
+                if (previousButton) previousButton.disabled = currentLogsPage <= 1;
+                if (nextButton) nextButton.disabled = currentLogsPage >= result.pagination.pages;
 
-                    allGameRecords.forEach(record => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td><strong style="color:#00ebff;">${record.username}</strong></td>
-                            <td>LV.${record.difficulty}</td>
-                            <td>${record.survival_time}s</td>
-                            <td>
-                                <button class="btn-action btn-view" onclick="playActionLog(${record.record_id})">
-                                    <i class="fas fa-play"></i> 回放
-                                </button>
-                            </td>
-                        `;
-                        tbody.appendChild(tr);
-                    });
+                if (allGameRecords.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center;">暫無遊戲紀錄</td></tr>';
+                    return;
                 }
+
+                allGameRecords.forEach(record => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong style="color:#00ebff;">${escapeHtml(record.username)}</strong></td>
+                        <td>LV.${Number(record.difficulty)}</td>
+                        <td>${Number(record.survival_time)}s</td>
+                        <td>
+                            <button class="btn-action btn-view" onclick="playActionLog(${Number(record.record_id)})">
+                                <i class="fas fa-play"></i> 回放
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             } catch (error) {
                 console.error("日誌列表載入失敗:", error);
             }
         }
 
-        function playActionLog(recordId) {
+        async function playActionLog(recordId) {
             const record = allGameRecords.find(r => r.record_id == recordId);
             const terminal = document.getElementById('replay-terminal');
-            
             if (!record) return;
 
-            terminal.innerHTML = `<div style="color: #00ebff; font-weight: bold;">[系統] 載入玩家 ${record.username} 的實戰操作日誌...</div>`;
-            terminal.innerHTML += `<div style="color: #a7b8d6;">[結算狀態] ${record.end_reason} | 難度: LV.${record.difficulty} | 存活: ${record.survival_time} 秒 | 分數: ${record.final_score}</div>`;
-            terminal.innerHTML += `<hr style="border-top: 1px dashed #333; margin: 10px 0;">`;
-
             try {
-                const logs = JSON.parse(record.action_logs);
-                
-                if (!logs || logs.length === 0) {
-                    terminal.innerHTML += `<div style="color: #ff4444; margin-top: 10px;">警告：該玩家在此局遊戲中未輸入任何防禦指令。</div>`;
+                const response = await fetch(`../../api/admin/get_records.php?record_id=${Number(record.record_id)}`);
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success' || !result.data?.[0]) {
+                    throw new Error(result.message || '操作紀錄讀取失敗');
+                }
+                const detailedRecord = result.data[0];
+                const logs = JSON.parse(detailedRecord.action_logs || '[]');
+                terminal.replaceChildren();
+
+                const heading = document.createElement('div');
+                heading.textContent = `[系統] 載入玩家 ${record.username} 的實戰操作日誌...`;
+                terminal.appendChild(heading);
+                const summary = document.createElement('div');
+                summary.textContent = `[結算狀態] ${record.end_reason} | 難度: LV.${record.difficulty} | 存活: ${record.survival_time} 秒 | 分數: ${record.final_score}`;
+                terminal.appendChild(summary);
+
+                if (!Array.isArray(logs) || logs.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.textContent = '該玩家在此局遊戲中未輸入任何防禦指令。';
+                    terminal.appendChild(empty);
                     return;
                 }
 
                 logs.forEach(log => {
-                    terminal.innerHTML += `
-                        <div style="margin-bottom: 6px;">
-                            <span style="color: #888;">[剩餘 ${log.timer_left}s]</span> 
-                            <span style="color: #ffaa00;">[${log.time}]</span> 
-                            <span style="color: #00FF00; font-weight: bold;">root@sec-server:~# ${log.cmd}</span>
-                        </div>
-                    `;
+                    const line = document.createElement('div');
+                    line.style.marginBottom = '6px';
+                    line.textContent = `[剩餘 ${Number(log.timer_left)}s] [${String(log.time)}] root@sec-server:~# ${String(log.cmd)}`;
+                    terminal.appendChild(line);
                 });
-                
                 terminal.scrollTop = terminal.scrollHeight;
-                
-            } catch (e) {
-                terminal.innerHTML += `<div style="color: #ff4444;">錯誤：日誌資料解析失敗。</div>`;
+            } catch (error) {
+                terminal.textContent = `操作紀錄載入失敗：${error.message}`;
             }
         }
 
@@ -914,9 +933,9 @@
 
                         tr.innerHTML = `
                             <td>${item.ip_id}</td>
-                            <td><strong style="color: #00ebff;">${item.ip_address}</strong></td>
-                            <td><span class="badge badge-teacher">${item.attack_type.toUpperCase()}</span></td>
-                            <td style="color: #a7b8d6; font-size: 0.9em;">${item.payload_desc}</td>
+                            <td><strong style="color:#00ebff;">${escapeHtml(item.ip_address)}</strong></td>
+                            <td><span class="badge badge-teacher">${escapeHtml(String(item.attack_type).toUpperCase())}</span></td>
+                            <td style="color: #a7b8d6; font-size: 0.9em;">${escapeHtml(item.payload_desc || '')}</td>
                             <td>${statusBadge}</td>
                             <td><button class="btn-action ${item.is_active == 1 ? 'btn-unbind' : 'btn-bind'}" onclick="toggleThreatStatus(${item.ip_id}, ${item.is_active != 1})">
                                 ${item.is_active == 1 ? '停用' : '啟用'}

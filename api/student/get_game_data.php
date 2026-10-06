@@ -4,46 +4,67 @@ require_once dirname(__DIR__) . '/core/db_connect.php';
 
 requireGet();
 $session = requireAuth(['student', 'teacher', 'admin']);
+$catalogOnly = ($_GET['catalog'] ?? '') === '1';
 
 try {
-    $threatStmt = $pdo->prepare('SELECT ip_address FROM threat_ips WHERE is_active = 1');
-    $threatStmt->execute();
-    $maliciousIPs = array_column($threatStmt->fetchAll(PDO::FETCH_ASSOC), 'ip_address');
+    if (!$catalogOnly) {
+        $threatStmt = $pdo->prepare(
+            'SELECT ip_address, attack_type, payload_desc
+             FROM threat_ips
+             WHERE is_active = 1'
+        );
+        $threatStmt->execute();
+        $threats = $threatStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $vipStmt = $pdo->prepare('SELECT ip_address FROM vip_ips');
-    $vipStmt->execute();
-    $vipIPs = array_column($vipStmt->fetchAll(PDO::FETCH_ASSOC), 'ip_address');
+        $vipStmt = $pdo->prepare('SELECT ip_address FROM vip_ips');
+        $vipStmt->execute();
+        $vipIPs = array_column($vipStmt->fetchAll(PDO::FETCH_ASSOC), 'ip_address');
 
-    $emailStmt = $pdo->prepare('SELECT sender, subject, content, is_malicious FROM phishing_emails');
-    $emailStmt->execute();
-    $emails = $emailStmt->fetchAll(PDO::FETCH_ASSOC);
+        $emailStmt = $pdo->prepare('SELECT sender, subject, content, is_malicious FROM phishing_emails');
+        $emailStmt->execute();
+        $emails = $emailStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
     if ($session['role'] === 'admin') {
-        $difficultySql = 'SELECT diff_id, name, description, owner_user_id, total_time, attack_rates,
-                     command_policy, attack_policy, game_settings, is_active
+        $difficultyFields = $catalogOnly
+            ? 'diff_id, name, description, owner_user_id, total_time, game_settings'
+            : 'diff_id, name, description, owner_user_id, total_time, attack_rates,
+               command_policy, attack_policy, game_settings, is_active';
+        $difficultySql = 'SELECT ' . $difficultyFields . '
                           FROM difficulty_configs
                           WHERE is_active = 1
                           ORDER BY diff_id ASC';
         $difficultyStmt = $pdo->prepare($difficultySql);
         $difficultyStmt->execute();
     } elseif ($session['role'] === 'teacher') {
-        $difficultySql = 'SELECT diff_id, name, description, owner_user_id, total_time, attack_rates,
-                     command_policy, attack_policy, game_settings, is_active
+        $difficultyFields = $catalogOnly
+            ? 'diff_id, name, description, owner_user_id, total_time, game_settings'
+            : 'diff_id, name, description, owner_user_id, total_time, attack_rates,
+               command_policy, attack_policy, game_settings, is_active';
+        $difficultySql = 'SELECT ' . $difficultyFields . '
                           FROM difficulty_configs
                           WHERE is_active = 1 AND (owner_user_id IS NULL OR owner_user_id = ?)
                           ORDER BY diff_id ASC';
         $difficultyStmt = $pdo->prepare($difficultySql);
         $difficultyStmt->execute([(int) $session['user_id']]);
     } else {
-        $difficultySql = 'SELECT d.diff_id, d.name, d.description, d.owner_user_id,
-                     d.total_time, d.attack_rates, d.command_policy,
-                     d.attack_policy, d.game_settings, d.is_active
+        $difficultyFields = $catalogOnly
+            ? 'd.diff_id, d.name, d.description, d.owner_user_id, d.total_time, d.game_settings'
+            : 'd.diff_id, d.name, d.description, d.owner_user_id,
+               d.total_time, d.attack_rates, d.command_policy,
+               d.attack_policy, d.game_settings, d.is_active';
+        $difficultySql = 'SELECT ' . $difficultyFields . '
                   FROM difficulty_configs d
                   LEFT JOIN users student ON student.user_id = ?
                                AND student.role = \'student\'
                                AND student.is_approved = 1
+                  LEFT JOIN difficulty_assignments assignment
+                         ON assignment.difficulty_id = d.diff_id
+                        AND assignment.student_id = student.user_id
+                        AND assignment.assigned_by = student.teacher_id
                   WHERE d.is_active = 1
-                    AND (d.owner_user_id IS NULL OR d.owner_user_id = student.teacher_id)
+                    AND (d.owner_user_id IS NULL OR
+                         (d.owner_user_id = student.teacher_id AND assignment.assignment_id IS NOT NULL))
                   ORDER BY d.diff_id ASC';
         $difficultyStmt = $pdo->prepare($difficultySql);
         $difficultyStmt->execute([(int) $session['user_id']]);
@@ -72,6 +93,29 @@ try {
         'dictionary_attack' => ['enabled' => true, 'speed_multiplier' => 1]
     ];
     foreach ($difficultyRows as $row) {
+        if ($catalogOnly) {
+            $gameSettings = json_decode($row['game_settings'] ?: '{}', true);
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($gameSettings)) {
+                throw new RuntimeException('難度密碼設定格式錯誤');
+            }
+            $passwordPolicy = $gameSettings['password_policy'] ?? [];
+            if (!is_array($passwordPolicy)) {
+                $passwordPolicy = [];
+            }
+            $difficulties[(int) $row['diff_id']] = [
+                'name' => $row['name'] ?: '未命名難度',
+                'description' => $row['description'] ?? null,
+                'time' => (int) $row['total_time'],
+                'gameSettings' => [
+                    'password_policy' => array_merge(
+                        $defaultGameSettings['password_policy'],
+                        $passwordPolicy
+                    )
+                ]
+            ];
+            continue;
+        }
+
         $attackRates = json_decode($row['attack_rates'], true);
         if (json_last_error() !== JSON_ERROR_NONE || !is_array($attackRates)) {
             throw new RuntimeException('難度設定格式錯誤');
@@ -101,9 +145,17 @@ try {
         ];
     }
 
+    if ($catalogOnly) {
+        echo json_encode([
+            'status' => 'success',
+            'difficulties' => $difficulties
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
     echo json_encode([
         'status' => 'success',
-        'maliciousIPs' => $maliciousIPs,
+        'threats' => $threats,
         'vipIPs' => $vipIPs,
         'emails' => [
             'normal' => array_values(array_filter($emails, fn($email) => (int) $email['is_malicious'] === 0)),

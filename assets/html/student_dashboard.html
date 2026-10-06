@@ -95,6 +95,11 @@
                         <tr><td colspan="5" style="text-align: center;">資料載入中...</td></tr>
                     </tbody>
                 </table>
+                <div style="display:flex; justify-content:center; align-items:center; gap:12px; margin-top:12px;">
+                    <button id="records-prev-page" type="button" onclick="loadMyRecords(recordsPage - 1)" disabled>上一頁</button>
+                    <span id="records-page-status" aria-live="polite">第 1 / 1 頁</span>
+                    <button id="records-next-page" type="button" onclick="loadMyRecords(recordsPage + 1)" disabled>下一頁</button>
+                </div>
             </div>
         </section>
 
@@ -111,6 +116,14 @@
             document.querySelectorAll('.menu-btn').forEach(menuButton => menuButton.classList.remove('active'));
             document.getElementById(`dashboard-tab-${tabName}`).classList.add('active');
             button.classList.add('active');
+        }
+
+        let recordsPage = 1;
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>'"]/g, char => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            })[char]);
         }
 
         document.addEventListener("DOMContentLoaded", async () => {
@@ -140,15 +153,17 @@
             }
         }
 
-        async function loadMyRecords() {
+        async function loadMyRecords(page = 1) {
             try {
-                const response = await fetch('../../api/student/get_my_records.php');
+                const requestedPage = Math.max(1, Number(page) || 1);
+                const response = await fetch(`../../api/student/get_my_records.php?page=${requestedPage}&limit=25`);
                 const result = await response.json();
+                if (!response.ok || result.status !== 'success') throw new Error(result.message || '紀錄讀取失敗');
                 
                 const tbody = document.getElementById('my-records-body');
                 tbody.innerHTML = '';
                 
-                if (result.status === 'success') {
+                {
                     // 顯示老師與審核狀態
                     if (result.teacher_name) {
                         let statusStr = result.is_approved == 1 ? " (已核准)" : " (審核中...)";
@@ -160,6 +175,14 @@
                     }
                     renderTeacherDifficulties(teacherDifficulties, result.is_approved == 1);
 
+                    recordsPage = result.pagination.page;
+                    const pageStatus = document.getElementById('records-page-status');
+                    const previousButton = document.getElementById('records-prev-page');
+                    const nextButton = document.getElementById('records-next-page');
+                    if (pageStatus) pageStatus.textContent = `第 ${recordsPage} / ${Math.max(1, result.pagination.pages)} 頁（共 ${result.pagination.total} 筆）`;
+                    if (previousButton) previousButton.disabled = recordsPage <= 1;
+                    if (nextButton) nextButton.disabled = recordsPage >= result.pagination.pages;
+
                     if (result.data.length === 0) {
                         tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #888;">目前尚無任何遊玩紀錄</td></tr>';
                         return;
@@ -167,22 +190,22 @@
 
                     result.data.forEach(record => {
                         const tr = document.createElement('tr');
-                        let diffText = record.difficulty_name || (record.difficulty == 0 ? '簡單' : record.difficulty == 1 ? '普通' : '困難');
+                        let diffText = escapeHtml(record.difficulty_name || (record.difficulty == 0 ? '簡單' : record.difficulty == 1 ? '普通' : '困難'));
                         let reasonColor = record.end_reason === 'SUCCESS' ? '#00ff00' : '#ff4444';
 
                         tr.innerHTML = `
-                            <td>${record.played_at}</td>
+                            <td>${escapeHtml(record.played_at)}</td>
                             <td>LV.${diffText}</td>
-                            <td>${record.survival_time} 秒</td>
-                            <td><strong style="color: #00ebff;">${record.final_score} 分</strong></td>
-                            <td><span style="color: ${reasonColor}; font-weight: bold;">${record.end_reason}</span></td>
+                            <td>${Number(record.survival_time)} 秒</td>
+                            <td><strong style="color: #00ebff;">${Number(record.final_score)} 分</strong></td>
+                            <td><span style="color: ${reasonColor}; font-weight: bold;">${escapeHtml(record.end_reason)}</span></td>
                         `;
                         tbody.appendChild(tr);
                     });
                 }
             } catch (error) {
                 console.error("載入紀錄失敗:", error);
-                document.getElementById('difficulty-status-text').innerText = '教師難度載入失敗，請重新整理控制台。';
+                document.getElementById('difficulty-status-text').innerText = '資料載入失敗，請重新整理控制台。';
             }
         }
 

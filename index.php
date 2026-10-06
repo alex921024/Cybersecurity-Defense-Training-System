@@ -4,11 +4,43 @@ require_once __DIR__ . '/api/core/common.php';
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
-if (!isset($_SESSION['user_id'])) {
+if (
+    !isset($_SESSION['user_id'], $_SESSION['role']) ||
+    !in_array($_SESSION['role'], ['student', 'teacher', 'admin'], true)
+) {
     header('Location: assets/html/login.html');
     exit;
 }
 header('Content-Type: text/html; charset=utf-8');
+header('Cache-Control: private, no-store, max-age=0');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('X-Frame-Options: DENY');
+$cspNonce = base64_encode(random_bytes(18));
+header(
+    "Content-Security-Policy: default-src 'self'; script-src 'self' https://cdn.jsdelivr.net 'nonce-{$cspNonce}'; " .
+    "style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; " .
+    "img-src 'self' data:; connect-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'"
+);
+header('Permissions-Policy: camera=(), microphone=(), geolocation=()');
+
+$assetVersions = [];
+foreach ([
+    'style.css',
+    'js/index.js',
+    'js/threatRadar.js',
+    'js/gameManager.js',
+    'js/systemStatus.js',
+    'js/database.js',
+    'js/cliModule.js'
+] as $assetPath) {
+    $assetVersions[$assetPath] = hash_file('sha256', __DIR__ . '/assets/' . $assetPath);
+}
+$moduleImportMap = [];
+foreach (['gameManager.js', 'systemStatus.js', 'database.js', 'cliModule.js'] as $module) {
+    $moduleImportMap['./assets/js/' . $module] =
+        './assets/js/' . $module . '?v=' . $assetVersions['js/' . $module];
+}
 ?>
 <!DOCTYPE html>
 <html lang="zh-TW">
@@ -16,25 +48,31 @@ header('Content-Type: text/html; charset=utf-8');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>資安防禦訓練系統 - 終端監控中心</title>
-    <link rel="stylesheet" href="assets/css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= $assetVersions['style.css'] ?>">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script type="importmap" nonce="<?= htmlspecialchars($cspNonce, ENT_QUOTES, 'UTF-8') ?>"><?= json_encode(
+        ['imports' => $moduleImportMap],
+        JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    ) ?></script>
 </head>
 <body>
     <div id="menu-screen" class="screen active">
         <h1>資安防禦訓練系統</h1>
         <div id="entry-content" class="menu-options">
-            <button onclick="toggleDifficultySelect()">開 始</button>
-            <button onclick="location.href='teaching/tutorial.php'">教 學</button>
-            <button onclick="location.href='assets/html/student_dashboard.html'">返回控制台</button>
+            <button data-action="toggle-difficulty">開 始</button>
+            <button data-nav="teaching/tutorial.php">教 學</button>
+            <button data-nav="assets/html/student_dashboard.html">返回控制台</button>
             <?php if (($_SESSION['role'] ?? '') === 'teacher'): ?>
-                <button onclick="location.href='assets/html/dashboard.html#difficulties'">教師難度</button>
+                <button data-nav="assets/html/dashboard.html#difficulties">教師難度</button>
             <?php endif; ?>
         </div>
         <div id="difficulty-content" class="menu-options hidden">
             <h2 style="color: #00FF00; text-align: center; margin-bottom: 20px;">請選擇訓練等級</h2>
             <div id="difficulty-options"><p>正在載入可用難度...</p></div>
-            <button class="break-btn" onclick="breakmenu()">返回</button>
+            <button class="break-btn" data-action="break-menu">返回</button>
         </div>
     </div>
 
@@ -42,12 +80,12 @@ header('Content-Type: text/html; charset=utf-8');
         <aside id="game-sidebar">
             <div class="sidebar-header">防禦中心</div>
             <nav class="tab-menu">
-                <button class="tab-btn active" onclick="switchTab(event, 'tab-firewall')"><i class="fas fa-shield-alt"></i> 監控與控制台</button>
-                <button class="tab-btn" onclick="switchTab(event, 'tab-status')"><i class="fas fa-chart-line"></i> 系統狀態</button>
-                <button class="tab-btn" onclick="switchTab(event, 'tab-mailbox')"><i class="fas fa-inbox"></i> 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">0</span></button>
-                <button class="tab-btn" onclick="switchTab(event, 'tab-manual')"><i class="fas fa-book"></i> 指令手冊</button>
+                <button class="tab-btn active" data-tab="tab-firewall"><i class="fas fa-shield-alt"></i> 監控與控制台</button>
+                <button class="tab-btn" data-tab="tab-status"><i class="fas fa-chart-line"></i> 系統狀態</button>
+                <button class="tab-btn" data-tab="tab-mailbox"><i class="fas fa-inbox"></i> 收件匣 <span id="unread-count" style="color:red; font-weight:bold;">0</span></button>
+                <button class="tab-btn" data-tab="tab-manual"><i class="fas fa-book"></i> 指令手冊</button>
             </nav>
-            <button class="quit-btn" onclick="quitGame()">放棄任務</button>
+            <button class="quit-btn" data-action="quit-game">放棄任務</button>
         </aside>
 
         <main id="tab-content-container">
@@ -77,7 +115,7 @@ header('Content-Type: text/html; charset=utf-8');
                             <div class="analysis-header" style="display: flex; justify-content: space-between; align-items: center;">
                                 <h3 style="margin:0;">即時流量監控 (Wireshark)</h3>
                                 <div>
-                                    <button id="btn-pause-packet" class="cmd-tag" style="background:#ff9900; color:#000; font-weight:bold; padding:6px 12px; margin-right: 10px;" onclick="togglePacketCapture()">暫停擷取</button>
+                                    <button id="btn-pause-packet" class="cmd-tag" style="background:#ff9900; color:#000; font-weight:bold; padding:6px 12px; margin-right: 10px;" data-action="toggle-packet-capture">暫停擷取</button>
                                     <select id="protocol-filter">
                                         <option value="ALL">全部 (ALL)</option>
                                         <option value="TCP">TCP</option>
@@ -109,19 +147,19 @@ header('Content-Type: text/html; charset=utf-8');
                                 <input type="text" id="cmd-input" placeholder="輸入防禦指令..." autocomplete="off">
                             </div>
                             <div class="quick-commands">
-                                <span class="cmd-tag" onclick="quickCmd('help')">help</span>
-                                <span class="cmd-tag" onclick="quickCmd('status')">status</span>
-                                <span class="cmd-tag" onclick="quickCmd('ipconfig')">ipconfig</span>
-                                <span class="cmd-tag" onclick="quickCmd('ping 10.0.0.1')">ping</span>
-                                <span class="cmd-tag" onclick="quickCmd('netstat')">netstat</span>
-                                <span class="cmd-tag" onclick="quickCmd('whois udp')">whois udp</span>
-                                <span class="cmd-tag" onclick="quickCmd('limit udp')">limit udp</span>
-                                <span class="cmd-tag" onclick="quickCmd('block ip')">block ip</span>
-                                <span class="cmd-tag" onclick="quickCmd('unblock udp')">unblock</span>
-                                <span class="cmd-tag" onclick="quickCmd('scan-mail')">scan-mail</span>
-                                <span class="cmd-tag" onclick="quickCmd('flush-dns')">flush-dns</span>
-                                <span class="cmd-tag" onclick="quickCmd('passwd')">passwd</span>
-                                <span class="cmd-tag" onclick="quickCmd('clear')">clear</span>
+                                <span class="cmd-tag" data-command="help">help</span>
+                                <span class="cmd-tag" data-command="status">status</span>
+                                <span class="cmd-tag" data-command="ipconfig">ipconfig</span>
+                                <span class="cmd-tag" data-command="ping 10.0.0.1">ping</span>
+                                <span class="cmd-tag" data-command="netstat">netstat</span>
+                                <span class="cmd-tag" data-command="whois udp">whois udp</span>
+                                <span class="cmd-tag" data-command="limit udp">limit udp</span>
+                                <span class="cmd-tag" data-command="block ip">block ip</span>
+                                <span class="cmd-tag" data-command="unblock udp">unblock</span>
+                                <span class="cmd-tag" data-command="scan-mail">scan-mail</span>
+                                <span class="cmd-tag" data-command="flush-dns">flush-dns</span>
+                                <span class="cmd-tag" data-command="passwd">passwd</span>
+                                <span class="cmd-tag" data-command="clear">clear</span>
                             </div>
                         </section>
                     </div>
@@ -137,7 +175,7 @@ header('Content-Type: text/html; charset=utf-8');
                             <div style="display: flex; gap: 10px; margin-bottom: 10px;">
                                 <input type="text" id="analyzer-input" placeholder="輸入可疑 IP 或 協定 (如 udp)..." 
                                        style="flex: 1; background: #111; border: 1px solid #333; color: #00FF00; padding: 8px; font-family: monospace;">
-                                <button class="manual-btn" style="margin: 0; padding: 8px 15px; background: #1a73e8; color: #fff;" onclick="analyzeGUI()">分析 (Whois)</button>
+                                <button class="manual-btn" style="margin: 0; padding: 8px 15px; background: #1a73e8; color: #fff;" data-action="analyze">分析 (Whois)</button>
                             </div>
                             <div id="analyzer-result" class="log-box" style="height: 60px; color: #00ebff;">
                                 等待輸入分析目標...
@@ -154,10 +192,10 @@ header('Content-Type: text/html; charset=utf-8');
                         <div class="firewall-card control-card">
                             <h3><i class="fas fa-sliders-h"></i> 策略快捷防禦開關 (需先分析)</h3>
                             <div class="policy-grid">
-                                <button class="policy-btn" id="btn-mitigate-udp" onclick="guiMitigate('udp')">阻斷 UDP 流量</button>
-                                <button class="policy-btn" id="btn-mitigate-icmp" onclick="guiMitigate('icmp')">阻斷 ICMP 流量</button>
-                                <button class="policy-btn" id="btn-mitigate-dns" onclick="guiMitigate('dns')">清除 DNS 快取</button>
-                                <button class="policy-btn" id="btn-mitigate-ip" onclick="guiMitigate('ip')">封鎖惡意來源 IP</button>
+                                <button class="policy-btn" id="btn-mitigate-udp" data-mitigate="udp">阻斷 UDP 流量</button>
+                                <button class="policy-btn" id="btn-mitigate-icmp" data-mitigate="icmp">阻斷 ICMP 流量</button>
+                                <button class="policy-btn" id="btn-mitigate-dns" data-mitigate="dns">清除 DNS 快取</button>
+                                <button class="policy-btn" id="btn-mitigate-ip" data-mitigate="ip">封鎖惡意來源 IP</button>
                             </div>
                         </div>
                         
@@ -189,7 +227,7 @@ header('Content-Type: text/html; charset=utf-8');
                     <div class="password-form-grid">
                         <label>新遊戲密碼<input id="game-password-change" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 碼"></label>
                         <label>確認新密碼<input id="game-password-change-confirm" type="password" minlength="8" autocomplete="new-password" placeholder="再次輸入密碼"></label>
-                        <button type="button" class="manual-btn" onclick="changeGamePassword()">更換遊戲密碼</button>
+                        <button type="button" class="manual-btn" data-action="change-password">更換遊戲密碼</button>
                     </div>
                     <div id="game-password-change-strength" class="password-strength" aria-live="polite">尚未輸入新密碼</div>
                 </section>
@@ -259,16 +297,16 @@ header('Content-Type: text/html; charset=utf-8');
             <p>確保系統不崩潰。防禦 SOP：發現異常 ➡️ Whois 分析 ➡️ 部署規則封鎖。</p>
             <div class="password-setup-box">
                 <label>設定本局遊戲密碼
-                    <span class="password-input-row"><input id="game-password-initial" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 碼"><button type="button" class="password-toggle" onclick="togglePasswordVisibility('game-password-initial', this)">顯示</button></span>
+                    <span class="password-input-row"><input id="game-password-initial" type="password" minlength="8" autocomplete="new-password" placeholder="至少 8 碼"><button type="button" class="password-toggle" data-toggle-password="game-password-initial">顯示</button></span>
                 </label>
                 <label>確認本局遊戲密碼
-                    <span class="password-input-row"><input id="game-password-initial-confirm" type="password" minlength="8" autocomplete="new-password" placeholder="再次輸入密碼"><button type="button" class="password-toggle" onclick="togglePasswordVisibility('game-password-initial-confirm', this)">顯示</button></span>
+                    <span class="password-input-row"><input id="game-password-initial-confirm" type="password" minlength="8" autocomplete="new-password" placeholder="再次輸入密碼"><button type="button" class="password-toggle" data-toggle-password="game-password-initial-confirm">顯示</button></span>
                 </label>
                 <div id="game-password-initial-mismatch" class="password-mismatch" aria-live="polite"></div>
                 <div id="game-password-initial-strength" class="password-strength" aria-live="polite">開始前必須設定密碼</div>
             </div>
-            <button id="confirm-start-button" class="manual-btn" style="color: #ffffff;background-color: #0fe70f;" onclick="confirmStart()" disabled>設定密碼後開始</button>
-            <button class="btn-cancel" style="color: #e2e2e2 ;background-color: #e00f0f;" onclick="breaktoDifficulty()">返回</button>
+            <button id="confirm-start-button" class="manual-btn" style="color: #ffffff;background-color: #0fe70f;" data-action="confirm-start" disabled>設定密碼後開始</button>
+            <button class="btn-cancel" style="color: #e2e2e2 ;background-color: #e00f0f;" data-action="back-to-difficulty">返回</button>
         </div>
     </div>
 
@@ -276,215 +314,12 @@ header('Content-Type: text/html; charset=utf-8');
         <div class="modal-content">
             <h2 id="game-over-title">任務結束</h2>
             <p id="game-over-reason"></p>
-            <button class="manual-btn" onclick="location.reload()">返回選單</button>
+            <button class="manual-btn" data-action="reload">返回選單</button>
         </div>
     </div>
 
-    <script>
-        async function verifyLogin() {
-            try {
-                const response = await fetch('api/auth/check_auth.php', { method: 'GET' });
-                const data = await response.json();
-                if (data.status !== 'success') {
-                    window.location.href = 'assets/html/login.html';
-                }
-            } catch (error) {
-                window.location.href = 'assets/html/login.html';
-            }
-        }
-        document.addEventListener('DOMContentLoaded', verifyLogin);
-    </script>
-    <script src="assets/js/threatRadar.js?v=20260918"></script>
-    <script type="module">
-        import GameManager from './assets/js/gameManager.js?v=20260918';
-        window.gameManagerInstance = new GameManager();
-        window.selectedDifficulty = 0;
-        window.difficultyCatalog = {};
+    <script src="assets/js/threatRadar.js?v=<?= $assetVersions['js/threatRadar.js'] ?>"></script>
+    <script type="module" src="assets/js/index.js?v=<?= $assetVersions['js/index.js'] ?>"></script>
 
-        window.switchTab = (evt, tabId) => {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            if (evt) evt.currentTarget.classList.add('active');
-            
-            if (tabId === 'tab-status' && window.gameManagerInstance && window.gameManagerInstance.charts) {
-                Object.values(window.gameManagerInstance.charts).forEach(chart => { if (chart) chart.resize(); });
-            }
-            const radarPanel = document.getElementById('threat-radar-panel');
-            if (radarPanel) {
-                radarPanel.style.display = (tabId === 'tab-firewall') ? 'flex' : 'none';
-            }
-        };
-
-        window.loadDifficultyOptions = async () => {
-            const container = document.getElementById('difficulty-options');
-            if (!container) return;
-            container.innerHTML = '<p>正在載入可用難度...</p>';
-
-            try {
-                const response = await fetch('api/student/get_game_data.php', { cache: 'no-store' });
-                const result = await response.json();
-                if (!response.ok || result.status !== 'success') throw new Error(result.message || '無法載入難度');
-
-                window.difficultyCatalog = result.difficulties || {};
-                container.innerHTML = '';
-                Object.entries(window.difficultyCatalog).forEach(([id, config]) => {
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.onclick = () => window.prepareGame(Number(id));
-                    button.textContent = `${config.name || `難度 ${id}`} - ${config.time} 秒`;
-                    if (config.description) button.title = config.description;
-                    container.appendChild(button);
-                });
-
-                if (container.children.length === 0) {
-                    container.innerHTML = '<p>目前沒有可用的訓練難度。</p>';
-                }
-
-                const requestedDifficulty = new URLSearchParams(window.location.search).get('difficulty');
-                if (requestedDifficulty !== null && window.difficultyCatalog[requestedDifficulty]) {
-                    window.prepareGame(Number(requestedDifficulty));
-                }
-            } catch (error) {
-                container.innerHTML = '<p>難度載入失敗，請重新整理頁面。</p>';
-                console.error('載入難度失敗:', error);
-            }
-        };
-
-        window.toggleDifficultySelect = async () => {
-            document.getElementById('entry-content').classList.toggle('hidden');
-            document.getElementById('difficulty-content').classList.toggle('hidden');
-            if (!document.getElementById('difficulty-content').classList.contains('hidden')) {
-                await window.loadDifficultyOptions();
-            }
-        };
-
-        window.breakmenu = () => {
-            document.getElementById('game-screen').classList.remove('active');
-            document.getElementById('menu-screen').classList.add('active');
-            document.getElementById('entry-content').classList.remove('hidden');
-            document.getElementById('difficulty-content').classList.add('hidden');
-        };
-
-        window.breaktoDifficulty = () => {
-            document.getElementById('tutorial-modal').classList.add('hidden');
-            document.getElementById('game-screen').classList.remove('active');
-            document.getElementById('menu-screen').classList.add('active');
-            document.getElementById('entry-content').classList.add('hidden');
-            document.getElementById('difficulty-content').classList.remove('hidden');
-        };
-
-        window.prepareGame = (diff) => {
-            window.selectedDifficulty = diff;
-            window.gameManagerInstance.previewDifficultyConfig = window.difficultyCatalog[diff] || null;
-            document.getElementById('game-password-initial').value = '';
-            document.getElementById('game-password-initial-confirm').value = '';
-            updateInitialPasswordStrength();
-            document.getElementById('tutorial-modal').classList.remove('hidden');
-        };
-
-        window.confirmStart = async () => {
-            const password = document.getElementById('game-password-initial').value;
-            const confirmation = document.getElementById('game-password-initial-confirm').value;
-            const validation = window.validateGamePassword(password, confirmation);
-            if (!validation.valid) {
-                updateInitialPasswordStrength(validation.message);
-                return;
-            }
-            window.pendingGamePassword = password;
-            const started = await window.gameManagerInstance.init(window.selectedDifficulty);
-            if (!started) return;
-            document.getElementById('tutorial-modal').classList.add('hidden');
-            window.switchTab(null, 'tab-firewall');
-        };
-
-        window.validateGamePassword = (password, confirmation) => {
-            return window.gameManagerInstance.validateGamePassword(password, confirmation);
-        };
-
-        function updateInitialPasswordStrength(message = '') {
-            const password = document.getElementById('game-password-initial').value;
-            const confirmation = document.getElementById('game-password-initial-confirm').value;
-            const result = password ? window.gameManagerInstance.getPasswordProfile(password) : null;
-            const strength = document.getElementById('game-password-initial-strength');
-            const button = document.getElementById('confirm-start-button');
-            const mismatch = document.getElementById('game-password-initial-mismatch');
-            mismatch.textContent = confirmation && password !== confirmation ? '密碼不一致，請重新確認。' : '';
-            if (!result) {
-                strength.textContent = message || '開始前必須設定密碼';
-                button.disabled = true;
-                return;
-            }
-            strength.textContent = message || `密碼強度：${result.label}（${result.strength}/100）`;
-            button.disabled = !window.validateGamePassword(password, confirmation).valid;
-        }
-
-        window.togglePasswordVisibility = (inputId, button) => {
-            const input = document.getElementById(inputId);
-            const showing = input.type === 'text';
-            input.type = showing ? 'password' : 'text';
-            button.textContent = showing ? '顯示' : '隱藏';
-            button.setAttribute('aria-pressed', String(!showing));
-        };
-
-        function updateChangePasswordStrength() {
-            const password = document.getElementById('game-password-change').value;
-            const profile = password ? window.gameManagerInstance.getPasswordProfile(password) : null;
-            document.getElementById('game-password-change-strength').textContent = profile
-                ? `密碼強度：${profile.label}（${profile.strength}/100）`
-                : '尚未輸入新密碼';
-        }
-
-        window.changeGamePassword = () => {
-            const password = document.getElementById('game-password-change').value;
-            const confirmation = document.getElementById('game-password-change-confirm').value;
-            const validation = window.validateGamePassword(password, confirmation);
-            const result = document.getElementById('game-password-change-strength');
-            if (!validation.valid) {
-                result.textContent = validation.message;
-                return;
-            }
-            const changed = window.gameManagerInstance.changeGamePassword(password);
-            result.textContent = changed ? '遊戲密碼已更新，破解進度已重置。' : '目前難度不允許更換密碼，或仍在冷卻時間內。';
-            if (changed) {
-                document.getElementById('game-password-change').value = '';
-                document.getElementById('game-password-change-confirm').value = '';
-            }
-        };
-
-        document.addEventListener('input', event => {
-            if (event.target.id === 'game-password-initial' || event.target.id === 'game-password-initial-confirm') updateInitialPasswordStrength();
-            if (event.target.id === 'game-password-change') updateChangePasswordStrength();
-        });
-
-        window.quickCmd = (cmd) => {
-            const input = document.getElementById('cmd-input');
-            input.value = cmd; input.focus();
-            input.dispatchEvent(new KeyboardEvent('keydown', {'key': 'Enter'}));
-        };
-
-        window.guiMitigate = (type) => {
-            if (window.gameManagerInstance) window.gameManagerInstance.guiMitigate(type);
-        };
-        
-        window.analyzeGUI = () => {
-            const input = document.getElementById('analyzer-input').value;
-            if (window.gameManagerInstance) window.gameManagerInstance.analyzeThreat(input);
-        };
-
-        window.quitGame = () => { if(confirm("確定放棄？")) location.reload(); };
-        window.viewMail = (id) => window.gameManagerInstance.viewMail(id);
-        window.handleMail = (id, action) => window.gameManagerInstance.handleMail(id, action);
-        
-        // 點擊 IP 自動帶入指令並聚焦
-        window.quickAnalyze = (ip) => {
-            const input = document.getElementById('cmd-input');
-            input.value = `whois ${ip}`; 
-            input.focus();
-            if(window.gameManagerInstance) {
-                window.gameManagerInstance.showNotification(`已選定目標 ${ip}，請按 Enter 執行分析。`, 'success');
-            }
-        };
-    </script>
 </body>
 </html>

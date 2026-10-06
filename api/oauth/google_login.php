@@ -6,6 +6,10 @@ if ($config['client_id'] === '' || $config['client_secret'] === '') {
 }
 
 $nonce = bin2hex(random_bytes(32));
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    session_start();
+}
+$_SESSION['google_oauth_state'] = $nonce;
 $issuedAt = (string) time();
 $stateData = $nonce . '.' . $issuedAt;
 $state = $stateData . '.' . hash_hmac('sha256', $stateData, $config['client_secret']);
