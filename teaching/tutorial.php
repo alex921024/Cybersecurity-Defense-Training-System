@@ -100,11 +100,19 @@ header('Content-Type: text/html; charset=utf-8');
                                 <input type="text" id="cmd-input" placeholder="教學模式中，請遵照指示..." autocomplete="off" disabled>
                             </div>
                             <div class="quick-commands">
-                                <span class="cmd-tag">status</span>
-                                <span class="cmd-tag">netstat</span>
-                                <span class="cmd-tag">whois udp</span>
-                                <span class="cmd-tag">limit udp</span>
-                                <span class="cmd-tag">block ip</span>
+                                <span class="cmd-tag" data-command="help">help</span>
+                                <span class="cmd-tag" data-command="status">status</span>
+                                <span class="cmd-tag" data-command="ipconfig">ipconfig</span>
+                                <span class="cmd-tag" data-command="ping 10.0.0.1">ping</span>
+                                <span class="cmd-tag" data-command="netstat">netstat</span>
+                                <span class="cmd-tag" data-command="whois udp">whois udp</span>
+                                <span class="cmd-tag" data-command="limit udp">limit udp</span>
+                                <span class="cmd-tag" data-command="block ip">block ip</span>
+                                <span class="cmd-tag" data-command="unblock udp">unblock</span>
+                                <span class="cmd-tag" data-command="scan-mail">scan-mail</span>
+                                <span class="cmd-tag" data-command="flush-dns">flush-dns</span>
+                                <span class="cmd-tag" data-command="passwd">passwd</span>
+                                <span class="cmd-tag" data-command="clear">clear</span>
                             </div>
                         </section>
                     </div>
@@ -112,7 +120,7 @@ header('Content-Type: text/html; charset=utf-8');
                     <div class="firewall-right">
                         <div class="firewall-card alert-card" id="guide-alert-card">
                             <h3><i class="fas fa-bell"></i> IDS 即時警報日誌</h3>
-                            <div id="ids-alert-log" class="log-box">教學系統載入完成，等待威脅模擬...</div>
+                            <div id="ids-alert-log" class="log-box">系統防禦已初始化，處於全面監控狀態...</div>
                         </div>
                         
                         <div class="firewall-card analysis-card" id="guide-analysis-card">

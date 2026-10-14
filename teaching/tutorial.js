@@ -1,4 +1,4 @@
-// 安全切換分頁功能
+// 全域切換分頁功能
 function switchTutorialTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -10,127 +10,169 @@ function switchTutorialTab(tabId) {
         document.getElementById(btnId).classList.add('active');
     }
 }
+window.switchTutorialTab = switchTutorialTab;
 
-const TUTORIAL_TARGET_IP = "192.168.4.12";
+const TUTORIAL_TARGET_IP = "45.22.19.8";
+
+// 固定正常流量資料 
+const FIXED_NORMAL_PACKETS = [
+    { time: "22:31:39", srcIp: "168.95.1.1",    srcPort: "39672", dstIp: "10.0.0.1", dstPort: "443", protocol: "TCP",  length: "165", status: "Standard", payload: "TLSv1.2 Application Data (Encrypted)..." },
+    { time: "22:31:38", srcIp: "10.0.0.5",      srcPort: "64158", dstIp: "10.0.0.1", dstPort: "80",  protocol: "HTTP", length: "150", status: "Standard", payload: "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<html><body>Welcome...</body></html>" },
+    { time: "22:31:37", srcIp: "192.168.1.38",  srcPort: "33923", dstIp: "10.0.0.1", dstPort: "443", protocol: "UDP",  length: "136", status: "Standard", payload: "UDP Client Packet Data..." },
+    { time: "22:31:36", srcIp: "192.168.1.100", srcPort: "24675", dstIp: "10.0.0.1", dstPort: "443", protocol: "UDP",  length: "104", status: "Standard", payload: "UDP Session Data..." },
+    { time: "22:31:35", srcIp: "10.0.0.5",      srcPort: "-",     dstIp: "10.0.0.1", dstPort: "-",   protocol: "ICMP", length: "170", status: "Standard", payload: "ICMP Echo Request (id=0x1234, seq=1, ttl=64)..." }
+];
+function renderBlockedThreatIntel(ip = TUTORIAL_TARGET_IP, attackType = "UDP 攻擊偵測") {
+    const threatList = document.getElementById('threat-intel-list');
+    if (threatList) {
+        threatList.innerHTML = `
+            <div class="blocked-intel-container">
+                <div class="blocked-intel-title">${attackType}</div>
+                <div class="blocked-intel-tags">
+                    <span class="blocked-intel-tag">${ip} (已封鎖)</span>
+                </div>
+            </div>
+        `;
+    }
+}
 
 // 教學關卡與互動邏輯
 const tutorialSteps = [
     {
         title: "歡迎進入 SOC 模擬指揮中心",
-        desc: "你可以透過點擊左側導覽列在各分頁間切換。請點擊下一步開始學會防禦黃金 SOP。",
+        desc: "你可以透過點擊左側導覽列在各分頁間切換。",
         action: () => { clearHighlights(); switchTutorialTab('tab-firewall'); }
     },
     {
-        title: "檢視 IDS 即時警報日誌",
-        desc: "當駭客發動攻擊時，右側的警報日誌會即時亮紅字彈出警告。現在，系統為你模擬一則 UDP DDoS 的警報！",
-        action: () => {
-            clearHighlights();
-            document.getElementById('guide-alert-card').classList.add('tutorial-highlight');
-            document.getElementById('ids-alert-log').innerHTML =
-                `<span style="color: #ff3333; font-weight: bold;">[WARNING] 偵測到來自未知來源的大量 UDP 異常洪水流量連線！</span>`;
+        title: "熟悉流程",
+        desc: "現在要帶你熟悉遊戲流程。",
+        action: () => { clearHighlights(); switchTutorialTab('tab-firewall'); }
+    },
+    {
+        title: "監控IP",
+        desc: "畫面上的『即時監控流(Wireshark)』，系統會將伺服器接收到的每一筆連線以封包的形式即時呈現，是你需要觀察的核心。",
+        action: () => { 
+            clearHighlights(); 
+            switchTutorialTab('tab-firewall'); 
+            const wiresharkSec = document.getElementById('analysis-section');
+            if (wiresharkSec) wiresharkSec.classList.add('tutorial-highlight');
         }
     },
-    { 
-        title: "威脅情報分析 (Whois)",
-        desc: "請在右側『威脅情報分析儀』輸入框打入 'udp'，並點擊『分析 (Whois)』按鈕（或按 Enter）進行分析！",
+    {
+        title: "指令控制台",
+        desc: "『指令控制台(root@sec-server:~#)』用於分析(status、netstat、whois)、威脅處置(limit、block、scan-mail)、清理復原(flush-dns、passwd、clear)等工作。",
+        action: () => {
+            clearHighlights();
+            const terminalSec = document.getElementById('terminal-section');
+            if (terminalSec) terminalSec.classList.add('tutorial-highlight');
+        }
+    },
+    {
+        title: "威脅分析",
+        desc: "現在請於『指令控制台(root@sec-server:~#)』下方指令按鈕在正式關卡中也可直接使用，不過先試著在輸入框著打入 'whois udp' ，並按下 Enter鍵 進行分析!",
         interactive: true,
-        targetInputId: 'analyzer-input',
-        expectedText: 'udp',
+        AtargetCmdInput: 'cmd-input',
+        expectedTextCmd: 'whois udp',
         action: () => {
             clearHighlights();
-            const input = document.getElementById('analyzer-input');
-            const card = document.getElementById('guide-analysis-card');
-            
-            if (input) {
-                input.disabled = false; // 解除禁用
-                input.focus();
-            }
-            if (card) {
-                card.classList.add('tutorial-highlight'); // 發亮分析卡片
-            }
-        }
-    },
-    {
-        title: "做得很好!",
-        desc: "發現威脅"
-    },
-    {
-        title: "策略快捷防禦一鍵阻斷",
-        interactive: true,
-        desc: "現在分析結果已出爐！請點擊右下角『策略快捷防禦開關』中的『阻斷 UDP 流量』來化解危機！",
-        targetBtnId: 'btn-mitigate-udp',
-        action: () => {
-            clearHighlights();
-            const btn = document.getElementById('btn-mitigate-udp');
-            const card = document.getElementById('guide-control-card');
-            if (btn) {
-                btn.disabled = false; // 解除禁用
-                btn.classList.add('tutorial-highlight');
-            }
-            if (card) {
-                card.classList.add('tutorial-highlight');
-                // 平滑滾動頁面，將卡片帶到畫面中央
-                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }
-    },
-    {
-        title: "很好",
-        desc: "現在已成功解除"
-    },
-    {
-        title: "檢視 即時流量監控 (Wireshark)",
-        desc: `即時流量監控 (Wireshark) 會時刻監控 IP 來源等資訊。請點選列表中來源為 ${TUTORIAL_TARGET_IP} 的異常封包列！`,
-        interactive: true,
-        targetWireshark: true,
-        action: () => {
-            clearHighlights();
-            const analysisSec = document.getElementById('analysis-section');
-            if (analysisSec) analysisSec.classList.add('tutorial-highlight');
-
-            // 清空既有列表，並呼叫副函式生成一條固定 IP 封包
-            const packetList = document.getElementById('packet-list');
-            if (packetList) packetList.innerHTML = '';
-
-            createWiresharkPacket({
-                time: "00:01:23",
-                srcIp: TUTORIAL_TARGET_IP,
-                protocol: "UDP",
-                status: "FLOOD"
-            });
-        }
-    },
-    {
-        title: "檢視 指令控制台 (root@sec-server:~#)",
-        desc: "點選分析後 IP 會顯示在指令控制台上方，可較快的查詢 IP 的狀態。",
-        action: () => {
-            clearHighlights();
-            // 控制台輸入框高亮閃爍
-            const cmdInput = document.getElementById('cmd-input') || 
-                             document.getElementById('terminal-input') || 
-                             document.getElementById('cli-input');
+            const cmdInput = document.getElementById('cmd-input');
             if (cmdInput) {
+                cmdInput.disabled = false;
+                cmdInput.focus();
                 cmdInput.classList.add('tutorial-highlight');
                 cmdInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
     },
     {
-        title: "檢視 指令控制台 (root@sec-server:~#)",
-        desc: "下方也有針對各類情況的指令",
+        title: "正常情況",
+        desc: "如果分析後沒有發現威脅，『威脅情報分析儀(sop 認證)』的回報顯示安全",
+        action: () => { 
+            clearHighlights(); 
+            switchTutorialTab('tab-firewall');
+            const alertCard = document.getElementById('guide-alert-card');
+            const analysisCard = document.getElementById('guide-analysis-card');
+            if (alertCard) alertCard.classList.add('tutorial-highlight');
+            if (analysisCard) analysisCard.classList.add('tutorial-highlight');
+        }
+    },
+    {
+        title: "異常狀態(IDS)",
+        desc: "當出現異常情況時， 『IDS 即時警報日誌』 會回報當前情況問題。",
+        action: () => { 
+            clearHighlights();
+            
+            appendMaliciousPacket();
+            const idsLogBox = document.getElementById('ids-alert-log');
+            if (idsLogBox) {
+                const now = new Date();
+                const timeStr = now.toTimeString().split(' ')[0]; 
+                idsLogBox.innerHTML = `<div style="color: #ffe08a; font-weight: bold;">[${timeStr}] [流量突增] 偵測到異常 UDP 流量，請進行分析！</div>` + idsLogBox.innerHTML;
+            }
+            const alertCard = document.getElementById('guide-alert-card');
+            if (alertCard) alertCard.classList.add('tutorial-highlight');
+        }
+    },
+    {
+        title: "異常狀態(IP)",
+        desc: `看來是 UDP 流量異常，請選擇異常封包並按下 '[來源 IP] ${TUTORIAL_TARGET_IP} [分析]'。`,
+        interactive: true,
+        targetWireshark: true,
         action: () => {
             clearHighlights();
-            const cmdTags = document.querySelectorAll('.quick-commands .cmd-tag');
-            const container = document.querySelector('.quick-commands');
-            if (cmdTags.length > 0) {
-                // 讓按鈕亮起高亮
-                cmdTags.forEach(tag => tag.classList.add('tutorial-highlight'));
-                // 自動捲動到按鈕區域
-                cmdTags[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            } else if (container) {
-                container.classList.add('tutorial-highlight');
-                container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const analysisSec = document.getElementById('analysis-section');
+            if (analysisSec) analysisSec.classList.add('tutorial-highlight');
+            initNormalWiresharkPackets();
+            appendMaliciousPacket();
+        }
+    },
+    {
+        title: "異常狀態分析(root)",
+        desc: "當按下分析後『指令控制台(root@sec-server:~#)』會幫你打好要分析的指令這時只要按 Enter鍵就好。",
+        interactive: true,
+        BtargetCmdInput: 'cmd-input',
+        expectedTextCmd: `whois ${TUTORIAL_TARGET_IP}`,
+        action: () => {
+            clearHighlights();
+            const cmdInput = document.getElementById('cmd-input');
+            if (cmdInput) {
+                cmdInput.disabled = false;
+                cmdInput.focus();
+                cmdInput.classList.add('tutorial-highlight');
             }
+        }
+    },
+    {
+        title: "策略快捷防禦一鍵阻斷",
+        interactive: true,
+        desc: "現在分析結果已出爐！請點擊右下角『策略快捷防禦開關』中的『阻斷 UDP 流量』，或者上方的『一鍵封鎖所有已分析危險 IP』按鈕！",
+        targetBtnId: 'btn-mitigate-udp',
+        targetBlockAllBtn: true,
+        action: () => {
+            clearHighlights();
+
+            const btn = document.getElementById('btn-mitigate-udp');
+            const card = document.getElementById('guide-control-card');
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.add('tutorial-highlight');
+            }
+            if (card) {
+                card.classList.add('tutorial-highlight');
+                card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            const intelCard = document.getElementById('guide-intel-card');
+            const blockBtn = document.getElementById('btn-block-all-intel');
+            if (intelCard) intelCard.classList.add('tutorial-highlight');
+            if (blockBtn) blockBtn.classList.add('tutorial-highlight');
+        }
+    },
+    {
+        title: "注意",
+        desc: "現在已成功解除危機！ 不過要注意在無分析情況下使用暴力阻斷同時也回引響到正常的IP封包。",
+        action: () => { 
+            clearHighlights();
+            renderBlockedThreatIntel(TUTORIAL_TARGET_IP, "UDP 攻擊偵測");
         }
     },
     {
@@ -148,7 +190,7 @@ const tutorialSteps = [
     },
     {
         title: "檢視 系統狀態",
-        desc: "這是你目前所需要堅守的時間",
+        desc: "這是你目前所需要堅守的時間。",
         action: () => {
             clearHighlights();
             const timerBanner = document.querySelector('.time-banner');
@@ -159,7 +201,7 @@ const tutorialSteps = [
     },
     {
         title: "檢視 系統狀態",
-        desc: "系統密碼的更新只用於本局的機制，與使用者帳號無關",
+        desc: "系統密碼的更新只用於本局的機制，與使用者帳號無關。",
         action: () => {
             clearHighlights();
             const crackBox = document.querySelector('.danger-box');
@@ -170,7 +212,7 @@ const tutorialSteps = [
     },
     {
         title: "檢視 系統狀態",
-        desc: "當字典破解進度過高時本局將直接失敗，所以請多加留意",
+        desc: "當字典破解進度過高時本局將直接失敗，所以請多加留意！",
         action: () => {
             clearHighlights();
             const crackBox = document.querySelector('.danger-box');
@@ -181,7 +223,7 @@ const tutorialSteps = [
     },
     {
         title: "檢視 系統狀態",
-        desc: "這裡也可同時觀察到目前電腦的負載情況",
+        desc: "這裡也可同時觀察到目前電腦的負載情況。",
         action: () => {
             clearHighlights();
             const monitorBoxes = document.querySelectorAll('.monitor-grid .chart-box:not(.danger-box)');
@@ -265,7 +307,6 @@ function updateUI() {
     const nextBtn = document.getElementById('next-btn');
 
     if (nextBtn) {
-        // 若該步驟有特定操作，隱藏「下一步」按鈕，強迫玩家手動完成
         if (step.interactive) {
             nextBtn.style.display = 'none';
             setupInteraction(step);
@@ -317,65 +358,141 @@ function renderMailList() {
 
 // 綁定互動事件
 function setupInteraction(step) {
-    // 分析 udp 互動（產出紅色異常警報）
-    if (step.targetInputId) {
-        const input = document.getElementById(step.targetInputId);
-        const analyzeBtn = input ? input.nextElementSibling : null;
-        
-        const executeAnalysis = () => {
-            if (input && input.value.trim().toLowerCase() === step.expectedText.toLowerCase()) {
-                input.disabled = true;
-                const resultBox = document.getElementById('analyzer-result');
-                if (resultBox) {
-                    resultBox.innerHTML = `<span style="color: #ffff00;">[ANALYZING] 正在向 Threat Intel 資料庫查詢 udp 協議...</span>`;
-                }
-                
-                setTimeout(() => {
-                    if (resultBox) {
-                        resultBox.innerHTML = `<span style="color: #f42a17;">[分析結果 - 異常] <br>目標：UDP <br>狀態：洪水攻擊 威脅等級：高</span>`;
+    if (step.AtargetCmdInput) {
+        const cmdInput = document.getElementById(step.AtargetCmdInput);
+        if (cmdInput) {
+            const handleCmdKeypress = (e) => {
+                if (e.key === 'Enter') {
+                    if (cmdInput.value.trim().toLowerCase() === step.expectedTextCmd.toLowerCase()) {
+                        cmdInput.disabled = true;
+                        cmdInput.removeEventListener('keypress', handleCmdKeypress);
+
+                        const terminalOutput = document.getElementById('terminal-output');
+                        if (terminalOutput) {
+                            terminalOutput.innerHTML += `<div>> ${cmdInput.value}</div>`;
+                            terminalOutput.innerHTML += `<div style="color: #00FF00;">root@sec-server:~# whois udp</div>`;
+                            terminalOutput.innerHTML += `<div style="color: #00FF00;">情報分析指令已發送...</div>`;
+                        }
+
+                        const analyzerResult = document.getElementById('analyzer-result');
+                        if (analyzerResult) {
+                            analyzerResult.innerHTML = `<span style="color: #494946;">[查詢中] 正在透過情報庫檢索 udp...</span>`;
+                        }
+
+                        setTimeout(() => {
+                            if (analyzerResult) {
+                                if (terminalOutput) {
+                                    terminalOutput.innerHTML += `<div style="color: #00FF00;">[Whois 分析] 檢索結果：UDP 狀態正常。</div>`;
+                                }
+                                analyzerResult.innerHTML = `<span style="color: #00ffff;">[分析結果 - 安全]<br>目標：UDP<br>狀態：目前未發現明顯的威脅情報。</span>`;
+                            }
+                            unlockAndNext();
+                        }, 2000);
+
+                    } else {
+                        alert(`請輸入正確指令：'${step.expectedTextCmd}'`);
                     }
-                    
-                    if (input) input.removeEventListener('keypress', handleKeypress);
-                    if (analyzeBtn) analyzeBtn.removeEventListener('click', executeAnalysis);
-                    unlockAndNext();
-                }, 800);
-            } else {
-                alert("請輸入 'udp' 後再進行分析！");
-            }
-        };
+                }
+            };
+            cmdInput.addEventListener('keypress', handleCmdKeypress);
+        }
+    }
+    
+    if (step.BtargetCmdInput) {
+        const cmdInput = document.getElementById(step.BtargetCmdInput);
+        if (cmdInput) {
+            const handleCmdKeypress = (e) => {
+                if (e.key === 'Enter') {
+                    if (cmdInput.value.trim().toLowerCase() === step.expectedTextCmd.toLowerCase()) {
+                        cmdInput.disabled = true;
+                        cmdInput.removeEventListener('keypress', handleCmdKeypress);
 
-        const handleKeypress = (e) => {
-            if (e.key === 'Enter') executeAnalysis();
-        };
+                        const terminalOutput = document.getElementById('terminal-output');
+                        if (terminalOutput) {
+                            terminalOutput.innerHTML += `<div>> ${cmdInput.value}</div>`;
+                            terminalOutput.innerHTML += `<div style="color: #00FF00;">root@sec-server:~# whois ${TUTORIAL_TARGET_IP}</div>`;
+                            terminalOutput.innerHTML += `<div style="color: #00FF00;">情報分析指令已發送...</div>`;
+                        }
 
-        if (analyzeBtn) analyzeBtn.addEventListener('click', executeAnalysis);
-        if (input) input.addEventListener('keypress', handleKeypress);
+                        const analyzerResult = document.getElementById('analyzer-result');
+                        const idsLogBox = document.getElementById('ids-alert-log');
+                        if (analyzerResult) {
+                            analyzerResult.innerHTML = `<span style="color: #494946;">[查詢中] 正在透過情報庫檢索 ${TUTORIAL_TARGET_IP}...</span>`;
+                        }
+
+                        setTimeout(() => {
+                            if (analyzerResult) {
+                                if (idsLogBox) {
+                                    idsLogBox.innerHTML = `<div style="color: #ffe08a;">[情報解鎖] 已確認 ${TUTORIAL_TARGET_IP} 為惡意來源，授權進行攔截。</div>` + idsLogBox.innerHTML;
+                                }
+                                if (terminalOutput) {
+                                    terminalOutput.innerHTML += `<div style="color: #00FF00;">[Whois 分析] 檢索結果：發現惡意 UDP Flood 威脅來源！</div>`;
+                                }
+                                analyzerResult.innerHTML = `<span style="color: #00ffff;">[分析結果 - 高危險] <br>目標: ${TUTORIAL_TARGET_IP} <br>狀態: 偵測到惡意 Payload。<br>建議行動: 立即進行阻斷 (Block)。</span>`;
+                            }
+                            const threatList = document.getElementById('threat-intel-list');
+                            if (threatList) {
+                                threatList.innerHTML = `
+                                    <button id="btn-block-all-intel" class="btn-danger-action tutorial-highlight">
+                                        <i class="fas fa-ban"></i> 一鍵封鎖所有已分析危險 IP
+                                    </button>
+                                `;
+                                const intelCard = document.getElementById('guide-intel-card');
+                                if (intelCard) intelCard.classList.add('tutorial-highlight');
+                            }
+                            unlockAndNext();
+                        }, 2000);
+
+                    } else {
+                        alert(`請輸入正確指令：'${step.expectedTextCmd}'...不是幫你打好了!?`);
+                    }
+                }
+            };
+            cmdInput.addEventListener('keypress', handleCmdKeypress);
+        }
     }
 
-    // 點擊阻斷按鈕互動
-    if (step.targetBtnId) {
+    // 處理處置階段
+    if (step.targetBtnId || step.targetBlockAllBtn) {
+        // 快捷按鈕
         const btn = document.getElementById(step.targetBtnId);
         if (btn) {
-            const handleClick = () => {
-                btn.removeEventListener('click', handleClick);
+            const handleMitigateClick = () => {
+                btn.removeEventListener('click', handleMitigateClick);
                 const resultBox = document.getElementById('analyzer-result');
-                
                 if (resultBox) {
                     resultBox.innerHTML = `<span style="color: #ffff00;">[PROCESSING] 正在套用 UDP 阻斷策略...</span>`;
                 }
 
                 setTimeout(() => {
-                    if (resultBox) {
-                        resultBox.innerHTML = `<span style="color: #00ffff;">[分析結果 - 安全]<br>目標：UDP<br>狀態：目前未發現明顯的威脅情報。</span>`;
-                    }
+                    renderBlockedThreatIntel(TUTORIAL_TARGET_IP, "UDP 攻擊偵測");
                     unlockAndNext();
                 }, 800);
             };
-            btn.addEventListener('click', handleClick);
+            btn.addEventListener('click', handleMitigateClick);
+        }
+
+        // 一鍵封鎖按鈕
+        const threatContainer = document.getElementById('threat-intel-list');
+        if (threatContainer) {
+            const handleBlockClick = (e) => {
+                if (e.target.closest('#btn-block-all-intel')) {
+                    threatContainer.removeEventListener('click', handleBlockClick);
+                    const resultBox = document.getElementById('analyzer-result');
+                    if (resultBox) {
+                        resultBox.innerHTML = `<span style="color: #ffff00;">[PROCESSING] 正在一鍵封鎖惡意 IP...</span>`;
+                    }
+
+                    setTimeout(() => {
+                        renderBlockedThreatIntel(TUTORIAL_TARGET_IP, "UDP 攻擊偵測");
+                        unlockAndNext();
+                    }, 800);
+                }
+            };
+            threatContainer.addEventListener('click', handleBlockClick);
         }
     }
 
-    // 分頁點擊互動（例如：點擊側邊欄「系統狀態」或「收件匣」按鈕）
     if (step.targetTabId) {
         const tabBtn = document.getElementById(step.targetTabId);
         if (tabBtn) {
@@ -389,7 +506,6 @@ function setupInteraction(step) {
         }
     }
 
-    // 信件處置按鈕點擊互動
     if (step.targetActionButtons) {
         const actionContainer = document.getElementById('mail-action-buttons');
         if (actionContainer) {
@@ -400,6 +516,58 @@ function setupInteraction(step) {
             actionContainer.addEventListener('click', handleAction);
         }
     }
+}
+
+// 渲染固定正常 Wireshark 封包
+function initNormalWiresharkPackets() {
+    const packetList = document.getElementById('packet-list');
+    if (!packetList) return;
+    packetList.innerHTML = ''; 
+
+    FIXED_NORMAL_PACKETS.forEach(pkt => {
+        const tr = document.createElement('tr');
+        const protoClass = `packet-row-${pkt.protocol.toLowerCase()}`;
+        tr.className = `packet-row-clickable ${protoClass}`;
+
+        tr.innerHTML = `
+            <td>${pkt.time}</td>
+            <td style="font-weight: bold;">${pkt.srcIp}</td>
+            <td>${pkt.srcPort}</td>
+            <td>${pkt.dstIp}</td>
+            <td class="port-highlight">${pkt.dstPort}</td>
+            <td>${pkt.protocol}</td>
+            <td>${pkt.length}</td>
+            <td>${pkt.status}</td>
+        `;
+
+        tr.addEventListener('click', () => {
+            document.querySelectorAll('#packet-list tr').forEach(r => r.classList.remove('packet-row-selected'));
+            tr.classList.add('packet-row-selected');
+
+            const payloadPanel = document.getElementById('packet-payload-content');
+            if (payloadPanel) {
+                payloadPanel.innerHTML = `<span style="color: #55ff55;">${pkt.payload}</span>`;
+            }
+        });
+
+        packetList.appendChild(tr);
+    });
+}
+
+// 將惡意封包插入最頂端
+function appendMaliciousPacket() {
+    createWiresharkPacket({
+        time: "00:01:23",
+        srcIp: TUTORIAL_TARGET_IP,
+        srcPort: "5000",
+        dstIp: "10.0.0.1",
+        dstPort: "80",
+        protocol: "UDP",
+        length: "1500",
+        status: "FLOOD",
+        payload: "0x0000:  ff ff ff ff ff ff ff ff ... (Garbage Data / UDP Flood)",
+        isDanger: true
+    });
 }
 
 function createWiresharkPacket(packetData) {
@@ -436,7 +604,7 @@ function bindPacketClickEvent(rowElement, targetIp) {
                         <span>[來源 IP]</span>
                         <span>${targetIp}</span>
                         <span>[分析]</span>
-                    </button>
+                    </button> <span style="color: #ff3333; font-weight: bold; font-size: 14px;">長度異常</span>
                 </div>
             `;
 
@@ -445,9 +613,7 @@ function bindPacketClickEvent(rowElement, targetIp) {
                 btnAnalyze.addEventListener('click', (e) => {
                     e.stopPropagation();
 
-                    const cmdInput = document.getElementById('cmd-input') || 
-                                     document.getElementById('terminal-input') || 
-                                     document.getElementById('cli-input');
+                    const cmdInput = document.getElementById('cmd-input');
                     if (cmdInput) {
                         cmdInput.value = `whois ${targetIp}`;
                         cmdInput.focus();
@@ -479,7 +645,9 @@ function nextStep() {
         location.href = '../index.php';
     }
 }
+window.nextStep = nextStep;
 
 document.addEventListener("DOMContentLoaded", () => {
+    initNormalWiresharkPackets();
     updateUI();
 });
